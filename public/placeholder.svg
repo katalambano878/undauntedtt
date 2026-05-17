@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="Image placeholder">
+  <rect width="400" height="400" fill="#e2e8f0"/>
+  <rect x="1" y="1" width="398" height="398" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 6"/>
+  <g fill="#94a3b8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <text x="200" y="195" font-size="20" text-anchor="middle">YOUR_IMAGE</text>
+    <text x="200" y="225" font-size="14" text-anchor="middle">replace /public/placeholder.svg</text>
+  </g>
+</svg>

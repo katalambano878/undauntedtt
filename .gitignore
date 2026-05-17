@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Next.js
+.next/
+out/
+build
+dist
+
+# Misc
+.DS_Store
+Thumbs.db
+*.pem
+*.tsbuildinfo
+
+# Build / debug logs (must not be committed — may leak local paths)
+*.log
+build_log.txt
+build_errors.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local Env Files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Supabase CLI cache
+supabase/.temp/
+supabase/.branches/
+
+# Vercel
+.vercel
+.vercel-cli-config
+
+# IDE / editor (local-only)
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace

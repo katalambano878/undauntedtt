@@ -1,0 +1,23 @@
+-- Cover every foreign key with a btree index for join + cascade performance.
+CREATE INDEX IF NOT EXISTS idx_blog_posts_author_id              ON public.blog_posts (author_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_product_id             ON public.cart_items (product_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_variant_id             ON public.cart_items (variant_id);
+CREATE INDEX IF NOT EXISTS idx_navigation_items_menu_id          ON public.navigation_items (menu_id);
+CREATE INDEX IF NOT EXISTS idx_navigation_items_parent_id        ON public.navigation_items (parent_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product_id            ON public.order_items (product_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_variant_id            ON public.order_items (variant_id);
+CREATE INDEX IF NOT EXISTS idx_order_status_history_order_id     ON public.order_status_history (order_id);
+CREATE INDEX IF NOT EXISTS idx_order_status_history_created_by   ON public.order_status_history (created_by);
+CREATE INDEX IF NOT EXISTS idx_product_images_product_id         ON public.product_images (product_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_product_id       ON public.product_variants (product_id);
+CREATE INDEX IF NOT EXISTS idx_return_items_order_item_id        ON public.return_items (order_item_id);
+CREATE INDEX IF NOT EXISTS idx_return_items_return_request_id    ON public.return_items (return_request_id);
+CREATE INDEX IF NOT EXISTS idx_return_requests_order_id          ON public.return_requests (order_id);
+CREATE INDEX IF NOT EXISTS idx_return_requests_user_id           ON public.return_requests (user_id);
+CREATE INDEX IF NOT EXISTS idx_review_images_review_id           ON public.review_images (review_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_user_id                   ON public.reviews (user_id);
+CREATE INDEX IF NOT EXISTS idx_store_settings_updated_by         ON public.store_settings (updated_by);
+CREATE INDEX IF NOT EXISTS idx_support_messages_ticket_id        ON public.support_messages (ticket_id);
+CREATE INDEX IF NOT EXISTS idx_support_messages_user_id          ON public.support_messages (user_id);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_assigned_to       ON public.support_tickets (assigned_to);
+CREATE INDEX IF NOT EXISTS idx_wishlist_items_product_id         ON public.wishlist_items (product_id);

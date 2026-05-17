@@ -1,0 +1,65 @@
+{
+  "name": "undaunted-treasure-trove",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Undaunted Treasure Trove — curated jewelry e-commerce store based in Adenta, Ghana.",
+  "author": "Undaunted Treasure Trove",
+  "license": "UNLICENSED",
+  "homepage": "https://undauntedtreasuretrove.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/undaunted-treasure-trove.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YOUR_USERNAME/undaunted-treasure-trove/issues"
+  },
+  "keywords": [
+    "jewelry",
+    "ecommerce",
+    "ghana",
+    "adenta",
+    "nextjs",
+    "supabase"
+  ],
+  "scripts": {
+    "build": "next build",
+    "dev": "cross-env NODE_ENV=development next dev -H 0.0.0.0 -p 3001",
+    "lint": "next lint",
+    "supabase:link": "supabase link --project-ref ${SUPABASE_PROJECT_REF:-your-project-ref}",
+    "supabase:push": "supabase db push",
+    "supabase:migrate": "supabase link --project-ref ${SUPABASE_PROJECT_REF:-your-project-ref} && supabase db push",
+    "db:migrate": "node scripts/run-migration.mjs",
+    "create-admin": "node scripts/create-admin-user.mjs",
+    "vercel": "vercel",
+    "images:compress": "node scripts/compress-images.mjs",
+    "generate:brand": "node scripts/generate-brand-assets.mjs"
+  },
+  "dependencies": {
+    "@react-google-maps/api": "^2.19.3",
+    "@supabase/supabase-js": "^2.91.1",
+    "jszip": "^3.10.1",
+    "next": "15.1.11",
+    "papaparse": "^5.5.3",
+    "pg": "^8.18.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3.0.2",
+    "resend": "^6.9.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.5.5",
+    "sharp": "^0.34.5",
+    "supabase": "^2.76.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  }
+}
