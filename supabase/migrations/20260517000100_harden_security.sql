@@ -34,7 +34,12 @@ CREATE POLICY "Users list own review images" ON storage.objects
 REVOKE ALL ON FUNCTION public.update_updated_at_column()         FROM anon, authenticated, public;
 REVOKE ALL ON FUNCTION public.update_product_rating_stats()      FROM anon, authenticated, public;
 REVOKE ALL ON FUNCTION public.handle_new_user()                  FROM anon, authenticated, public;
-REVOKE ALL ON FUNCTION public.is_admin_or_staff()                FROM anon, authenticated, public;
+-- NOTE: Do NOT revoke EXECUTE on is_admin_or_staff() — it's referenced by
+-- the USING clause of many RLS policies (orders, profiles, products,
+-- product_images, etc.). Postgres evaluates those policies as the calling
+-- role, so without EXECUTE the policy fails and PostgREST returns 403.
+-- The function is SECURITY DEFINER so EXECUTE itself is safe.
+-- (Previously this line revoked it, which broke admin login.)
 REVOKE ALL ON FUNCTION public.mark_order_paid(text, text)        FROM anon, authenticated, public;
 REVOKE ALL ON FUNCTION public.update_customer_stats(text, numeric) FROM anon, authenticated, public;
 REVOKE ALL ON FUNCTION public.upsert_customer_from_order(text, text, text, text, text, uuid, jsonb) FROM anon, authenticated, public;

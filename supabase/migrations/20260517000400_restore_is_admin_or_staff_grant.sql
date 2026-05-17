@@ -1,0 +1,19 @@
+-- ============================================================================
+-- Restore EXECUTE on public.is_admin_or_staff() to authenticated and anon.
+--
+-- The 20260517000100_harden_security migration revoked EXECUTE on every
+-- SECURITY DEFINER helper from anon and authenticated. That was correct for
+-- RPC-only helpers (mark_order_paid, update_customer_stats, etc.) but wrong
+-- for is_admin_or_staff(), which is invoked from the USING clauses of RLS
+-- policies on orders, profiles, products, product_images, etc.
+--
+-- Postgres evaluates RLS policies as the calling role. Without EXECUTE on
+-- the function, policy evaluation throws "permission denied for function
+-- is_admin_or_staff" and PostgREST returns 403 for every authenticated read
+-- on those tables — which broke admin login and the storefront product
+-- listings (anon also calls policies that branch on this function).
+--
+-- The function is SECURITY DEFINER, so granting EXECUTE doesn't expose any
+-- privileged data — it only lets the planner evaluate the policy.
+-- ============================================================================
+GRANT EXECUTE ON FUNCTION public.is_admin_or_staff() TO authenticated, anon;
