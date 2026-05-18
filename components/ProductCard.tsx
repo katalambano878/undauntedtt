@@ -178,7 +178,7 @@ export default function ProductCard({
           {hasVariants ? (
             <Link
               href={`/product/${slug}`}
-              className="w-full border border-brand-taupe/60 text-brand-ink py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-brand-caramel/15 active:bg-brand-taupe/20 transition-colors flex items-center justify-center space-x-1"
+              className="w-full border border-brand-taupe/60 text-brand-ink py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-brand-cream active:bg-brand-taupe/20 transition-colors flex items-center justify-center space-x-1"
             >
               <i className="ri-list-check text-xs sm:text-sm"></i>
               <span>Select</span>
@@ -190,7 +190,7 @@ export default function ProductCard({
                 addToCart({ id, name, price, image, quantity: moq, slug, maxStock, moq });
               }}
               disabled={!inStock}
-              className="w-full border border-brand-taupe/60 text-brand-ink py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-brand-caramel/15 active:bg-brand-taupe/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full border border-brand-taupe/60 text-brand-ink py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-brand-cream active:bg-brand-taupe/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {moq > 1 ? `Add ${moq}` : 'Add to Cart'}
             </button>

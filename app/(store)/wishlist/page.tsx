@@ -95,9 +95,9 @@ export default function WishlistPage() {
 
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="bg-gradient-to-r from-brand-bronze to-brand-bronze rounded-2xl p-12 text-center text-white">
+          <div className="bg-gradient-to-r from-brand-caramel to-brand-bronze rounded-2xl p-12 text-center text-white">
             <h2 className="text-3xl font-bold mb-4">Share Your Wishlist</h2>
-            <p className="text-brand-caramel/25 mb-8 text-lg">Let friends and family know what you love</p>
+            <p className="text-brand-cream/85 mb-8 text-lg">Let friends and family know what you love</p>
             <div className="flex justify-center space-x-4">
               <button className="w-12 h-12 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
                 <i className="ri-facebook-fill text-xl"></i>

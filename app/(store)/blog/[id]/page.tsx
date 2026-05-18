@@ -337,7 +337,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
               {post.category}
             </span>
             <h1 className="text-5xl font-bold text-white mb-6">{post.title}</h1>
-            <div className="flex items-center justify-center gap-6 text-brand-caramel/25">
+            <div className="flex items-center justify-center gap-6 text-brand-cream/85">
               <span className="flex items-center gap-2">
                 <i className="ri-user-line"></i>
                 {post.author}
@@ -430,9 +430,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        <div className="mt-16 bg-gradient-to-br from-brand-bronze to-brand-bronze rounded-2xl p-12 text-center text-white">
+        <div className="mt-16 bg-gradient-to-br from-brand-caramel to-brand-bronze rounded-2xl p-12 text-center text-white">
           <h2 className="text-3xl font-bold mb-4">Enjoyed This Article?</h2>
-          <p className="text-brand-caramel/25 mb-8 text-lg">
+          <p className="text-brand-cream/85 mb-8 text-lg">
             Subscribe to our newsletter for more shopping tips and exclusive offers
           </p>
           <form className="max-w-md mx-auto flex gap-3">
@@ -443,7 +443,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
             />
             <button
               type="submit"
-              className="bg-white text-brand-bronze px-8 py-4 rounded-full font-medium hover:bg-brand-caramel/15 transition-colors whitespace-nowrap"
+              className="bg-white text-brand-bronze px-8 py-4 rounded-full font-medium hover:bg-brand-cream transition-colors whitespace-nowrap"
             >
               Subscribe
             </button>

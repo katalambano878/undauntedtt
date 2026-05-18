@@ -173,7 +173,7 @@ export default function AddressBook() {
               {!address.isDefault && (
                 <button
                   onClick={() => setDefault(address.id)}
-                  className="flex-1 py-2 border border-brand-bronze text-brand-bronze rounded-lg font-semibold hover:bg-brand-caramel/15 transition-colors whitespace-nowrap"
+                  className="flex-1 py-2 border border-brand-bronze text-brand-bronze rounded-lg font-semibold hover:bg-brand-cream transition-colors whitespace-nowrap"
                 >
                   Set Default
                 </button>

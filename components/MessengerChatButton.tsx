@@ -67,7 +67,7 @@ export default function MessengerChatButton() {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold">Customer Support</h3>
-                <p className="text-sm text-brand-caramel/25">Typically replies instantly</p>
+                <p className="text-sm text-brand-cream/85">Typically replies instantly</p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}

@@ -355,12 +355,12 @@ export default function ContactPage() {
               ))}
             </div>
 
-            <div className="bg-gradient-to-br from-brand-bronze to-brand-bronze p-8 rounded-2xl text-white">
+            <div className="bg-gradient-to-br from-brand-caramel to-brand-bronze p-8 rounded-2xl text-white">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-4">
                 <i className="ri-customer-service-2-line text-2xl"></i>
               </div>
               <h3 className="text-2xl font-bold mb-3">Need Immediate Help?</h3>
-              <p className="text-brand-caramel/25 mb-6 leading-relaxed">
+              <p className="text-brand-cream/85 mb-6 leading-relaxed">
                 Our customer support hours are listed above. For urgent matters, use WhatsApp or phone if configured.
               </p>
               {waNumber ? (
@@ -368,7 +368,7 @@ export default function ContactPage() {
                   href={waLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-white text-brand-bronze px-6 py-3 rounded-full font-medium hover:bg-brand-caramel/15 transition-colors whitespace-nowrap"
+                  className="inline-flex items-center gap-2 bg-white text-brand-bronze px-6 py-3 rounded-full font-medium hover:bg-brand-cream transition-colors whitespace-nowrap"
                 >
                   <i className="ri-whatsapp-line text-xl"></i>
                   Chat on WhatsApp

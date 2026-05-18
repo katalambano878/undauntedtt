@@ -208,19 +208,19 @@ export default function FAQsPage() {
         )}
       </div>
 
-      <div className="bg-gradient-to-br from-brand-bronze to-brand-bronze py-16">
+      <div className="bg-gradient-to-br from-brand-caramel to-brand-bronze py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <i className="ri-customer-service-2-line text-3xl text-white"></i>
           </div>
           <h2 className="text-3xl font-bold text-white mb-4">Still Have Questions?</h2>
-          <p className="text-xl text-brand-caramel/25 mb-8 leading-relaxed">
+          <p className="text-xl text-brand-cream/85 mb-8 leading-relaxed">
             Our customer service team is ready to help. Contact us and we'll respond within 24 hours.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 bg-white text-brand-bronze px-8 py-4 rounded-full font-medium hover:bg-brand-caramel/15 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 bg-white text-brand-bronze px-8 py-4 rounded-full font-medium hover:bg-brand-cream transition-colors whitespace-nowrap"
             >
               <i className="ri-mail-line text-lg"></i>
               Contact Support

@@ -231,15 +231,15 @@ export default function BlogPage() {
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-brand-bronze to-brand-bronze py-16">
+      <div className="bg-gradient-to-br from-brand-caramel to-brand-bronze py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-4">Ready to Start Shopping?</h2>
-          <p className="text-xl text-brand-caramel/25 mb-8 leading-relaxed">
+          <p className="text-xl text-brand-cream/85 mb-8 leading-relaxed">
             Browse our jewelry collection
           </p>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 bg-white text-brand-bronze px-8 py-4 rounded-full font-medium hover:bg-brand-caramel/15 transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-2 bg-white text-brand-bronze px-8 py-4 rounded-full font-medium hover:bg-brand-cream transition-colors whitespace-nowrap"
           >
             Explore Products
             <i className="ri-arrow-right-line"></i>

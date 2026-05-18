@@ -267,7 +267,7 @@ function ShopContent() {
                           }}
                           className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedCategory === 'all'
                             ? 'bg-brand-bronze text-brand-cream font-medium'
-                            : 'text-brand-ink/80 hover:bg-brand-caramel/15'
+                            : 'text-brand-ink/80 hover:bg-brand-cream'
                             }`}
                         >
                           All Products
@@ -290,7 +290,7 @@ function ShopContent() {
                                 }}
                                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors flex justify-between items-center ${isSelected
                                   ? 'bg-brand-caramel/20 text-brand-bronze font-medium'
-                                  : 'text-brand-ink/80 hover:bg-brand-caramel/15'
+                                  : 'text-brand-ink/80 hover:bg-brand-cream'
                                   }`}
                               >
                                 <span>{parent.name}</span>
@@ -309,7 +309,7 @@ function ShopContent() {
                                       }}
                                       className={`w-full text-left px-4 py-1.5 rounded-lg text-sm transition-colors ${selectedCategory === child.slug
                                         ? 'text-brand-bronze font-medium bg-brand-caramel/15'
-                                        : 'text-brand-ink/70 hover:text-brand-ink hover:bg-brand-caramel/15'
+                                        : 'text-brand-ink/70 hover:text-brand-ink hover:bg-brand-cream'
                                         }`}
                                     >
                                       {child.name}
@@ -359,7 +359,7 @@ function ShopContent() {
                             }}
                             className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedRating === rating
                               ? 'bg-brand-caramel/20 text-brand-bronze'
-                              : 'text-brand-ink/80 hover:bg-brand-caramel/15'
+                              : 'text-brand-ink/80 hover:bg-brand-cream'
                               }`}
                           >
                             <div className="flex items-center space-x-2">
@@ -486,7 +486,7 @@ function ShopContent() {
                     <button
                       onClick={() => setPage(p => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="w-10 h-10 flex items-center justify-center border border-brand-taupe rounded-lg hover:bg-brand-caramel/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 flex items-center justify-center border border-brand-taupe rounded-lg hover:bg-brand-cream transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <i className="ri-arrow-left-s-line text-xl text-brand-ink/80"></i>
                     </button>
@@ -499,7 +499,7 @@ function ShopContent() {
                     <button
                       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
-                      className="w-10 h-10 flex items-center justify-center border border-brand-taupe rounded-lg hover:bg-brand-caramel/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-10 h-10 flex items-center justify-center border border-brand-taupe rounded-lg hover:bg-brand-cream transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <i className="ri-arrow-right-s-line text-xl text-brand-ink/80"></i>
                     </button>

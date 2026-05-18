@@ -242,7 +242,7 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="block px-4 py-3 text-lg font-medium text-brand-ink hover:bg-brand-caramel/15 hover:text-brand-caramel rounded-lg transition-colors"
+                  className="block px-4 py-3 text-lg font-medium text-brand-ink hover:bg-brand-cream hover:text-brand-caramel rounded-lg transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}
@@ -257,7 +257,7 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="block px-4 py-3 text-base font-medium text-brand-ink/70 hover:bg-brand-caramel/15 hover:text-brand-ink rounded-lg transition-colors"
+                  className="block px-4 py-3 text-base font-medium text-brand-ink/70 hover:bg-brand-cream hover:text-brand-ink rounded-lg transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}

@@ -121,15 +121,15 @@ export default function AboutPage() {
       </div>
 
       {/* CTA */}
-      <div className="bg-brand-bronze py-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
+      <div className="bg-gradient-to-br from-brand-caramel to-brand-bronze py-24">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-brand-cream">
           <h2 className="text-4xl md:text-5xl font-bold mb-8">Ready to find your next treasure?</h2>
-          <p className="text-xl text-brand-caramel/25 mb-10 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-xl text-brand-cream/85 mb-10 leading-relaxed max-w-2xl mx-auto">
             Browse our jewelry catalogue — wholesale and retail. Visit us in Adenta or message us on WhatsApp for orders and bespoke requests.
           </p>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-3 bg-white text-brand-bronze px-10 py-5 rounded-full font-bold text-lg hover:bg-brand-caramel/15 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all"
+            className="inline-flex items-center gap-3 bg-white text-brand-bronze px-10 py-5 rounded-full font-bold text-lg hover:bg-brand-cream transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all"
           >
             Start Shopping
             <i className="ri-arrow-right-line"></i>

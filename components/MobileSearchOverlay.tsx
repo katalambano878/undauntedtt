@@ -120,7 +120,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }: MobileSearchOve
                 {popularSearches.map((search, index) => (
                   <button
                     key={index}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-brand-caramel/15 hover:text-brand-caramel transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-brand-cream hover:text-brand-caramel transition-colors whitespace-nowrap"
                   >
                     {search}
                   </button>

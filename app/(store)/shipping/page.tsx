@@ -269,15 +269,15 @@ export default function ShippingPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-brand-bronze to-brand-bronze rounded-2xl p-8 text-white text-center">
+        <div className="bg-gradient-to-br from-brand-caramel to-brand-bronze rounded-2xl p-8 text-white text-center">
           <h2 className="text-3xl font-bold mb-4">Need Help with Your Delivery?</h2>
-          <p className="text-brand-caramel/25 mb-6 leading-relaxed">
+          <p className="text-brand-cream/85 mb-6 leading-relaxed">
             Questions about shipping costs, delivery times, or tracking? Our customer service team is here to help.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 bg-white text-brand-bronze px-6 py-3 rounded-full font-medium hover:bg-brand-caramel/15 transition-colors whitespace-nowrap"
+              className="inline-flex items-center gap-2 bg-white text-brand-bronze px-6 py-3 rounded-full font-medium hover:bg-brand-cream transition-colors whitespace-nowrap"
             >
               Contact Support
             </Link>
