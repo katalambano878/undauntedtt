@@ -8,7 +8,7 @@
  *
  * Run with: `npm run generate:brand`
  *
- * Background colour: blue-950 (#172554) — matches the footer / hero.
+ * Background colour: black (#000000) — matches the official logo artwork.
  * Padding for any-purpose icons: ~12% safe-area.
  * Padding for maskable icons: ~38% safe-area (to survive Android's adaptive
  * icon mask which can crop up to 25% on each side).
@@ -24,7 +24,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const PUB = path.join(ROOT, 'public');
 
-const NAVY = { r: 0x17, g: 0x25, b: 0x54, alpha: 1 };
+const BLACK = { r: 0x00, g: 0x00, b: 0x00, alpha: 1 };
 const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
 
 const LOGO_SRC = process.env.LOGO_SRC || path.join(PUB, 'logo.png');
@@ -47,7 +47,7 @@ async function fittedLogoBuffer(targetSize, paddingFactor) {
     .toBuffer();
 }
 
-async function squareIcon(size, { paddingFactor = 0.86, background = NAVY } = {}) {
+async function squareIcon(size, { paddingFactor = 0.86, background = BLACK } = {}) {
   const fitted = await fittedLogoBuffer(size, paddingFactor);
   return sharp({
     create: { width: size, height: size, channels: 4, background },
@@ -57,14 +57,14 @@ async function squareIcon(size, { paddingFactor = 0.86, background = NAVY } = {}
     .toBuffer();
 }
 
-async function landscapeImage(width, height, paddingFactor = 0.65) {
+async function landscapeImage(width, height, paddingFactor = 0.62, background = BLACK) {
   const innerW = Math.round(width * paddingFactor);
   const innerH = Math.round(height * paddingFactor);
   const fitted = await sharp(MASTER)
     .resize(innerW, innerH, { fit: 'inside', background: TRANSPARENT })
     .toBuffer();
   return sharp({
-    create: { width, height, channels: 4, background: NAVY },
+    create: { width, height, channels: 4, background },
   })
     .composite([{ input: fitted, gravity: 'center' }])
     .png({ compressionLevel: 9 })
@@ -149,7 +149,7 @@ async function main() {
   ]);
   writes.push(fs.writeFile(path.join(PUB, 'favicon.ico'), ico));
 
-  // Open Graph / social share images.
+  // Open Graph / social share images (black canvas matches the logo artwork).
   const og = await landscapeImage(1200, 630, 0.62);
   const ogSquare = await landscapeImage(1200, 1200, 0.65);
   writes.push(fs.writeFile(path.join(PUB, 'og-image.png'), og));

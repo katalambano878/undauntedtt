@@ -207,8 +207,8 @@ function buildOrganizationJsonLd() {
     logo: {
       '@type': 'ImageObject',
       url: `${siteUrl}/logo.png`,
-      width: 735,
-      height: 520,
+      width: 596,
+      height: 419,
     },
     image: `${siteUrl}/og-image.png`,
     description: metaDesc,

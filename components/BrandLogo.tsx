@@ -13,9 +13,8 @@ interface BrandLogoProps {
 }
 
 /**
- * The Undaunted Treasure Trove brand mark — the gold ornate "UT" monogram with
- * the UNDAUNTEDTT wordmark. Backed by `/public/logo.png` (735 × 520, transparent
- * background) so it sits cleanly on light or dark surfaces.
+ * The Undaunted brand mark — face-earring artwork with the "Undaunted"
+ * wordmark. Backed by `/public/logo.png` (596 × 419, black background).
  *
  * Use this anywhere the brand needs to be shown: header, footer, PWA splash,
  * install prompt, admin sidebar, admin login, etc.
@@ -28,7 +27,7 @@ export default function BrandLogo({
 }: BrandLogoProps) {
   const siteName = getSiteName();
   const wordmark = getWordmark();
-  const aspectRatio = 735 / 520;
+  const aspectRatio = 596 / 419;
   const width = Math.round(height * aspectRatio);
   return (
     <Image
