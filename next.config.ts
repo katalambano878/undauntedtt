@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // Serve images directly (Supabase Storage + /public already sit behind a CDN).
+    // This avoids Vercel's Image Optimization quota, which was returning 402 and
+    // breaking every product image on the storefront.
+    unoptimized: true,
     minimumCacheTTL: 2592000, // Cache optimized images for 30 days
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],

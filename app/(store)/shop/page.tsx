@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import ProductCard, { type ColorVariant } from '@/components/ProductCard';
@@ -18,6 +18,7 @@ function ShopContent() {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([{ id: 'all', name: 'All Products', count: 0 }]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -29,7 +30,8 @@ function ShopContent() {
   const [sortBy, setSortBy] = useState('popular');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const productsPerPage = 9;
+  const productsPerPage = 12;
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize from URL params
   useEffect(() => {
@@ -61,7 +63,12 @@ function ShopContent() {
   // Fetch Products
   useEffect(() => {
     async function fetchProducts() {
-      setLoading(true);
+      const isFirstPage = page === 1;
+      if (isFirstPage) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setFetchError(null);
       try {
         const search = searchParams.get('search');
@@ -178,7 +185,7 @@ function ShopContent() {
               name: p.name,
               price: p.price,
               originalPrice: p.compare_at_price,
-              image: imgs[0]?.url || 'https://via.placeholder.com/800x800?text=No+Image',
+              image: imgs[0]?.url || '',
               rating: p.rating_avg || 0,
               reviewCount: 0, // Need to implement reviews relation
               badge: p.compare_at_price > p.price ? 'Sale' : undefined, // Simple badge logic
@@ -191,7 +198,12 @@ function ShopContent() {
               colorVariants
             };
           });
-          setProducts(formattedProducts);
+          setProducts((prev) => {
+            if (isFirstPage) return formattedProducts;
+            // De-dupe in case of overlapping ranges
+            const seen = new Set(prev.map((x) => x.id));
+            return [...prev, ...formattedProducts.filter((x) => !seen.has(x.id))];
+          });
           setTotalProducts(count || 0);
         }
       } catch (err: unknown) {
@@ -199,10 +211,13 @@ function ShopContent() {
         const msg = e?.message || (err instanceof Error ? err.message : 'Unable to load products');
         console.error('Error fetching products:', msg, e?.code || '', e?.details || '');
         setFetchError(msg);
-        setProducts([]);
-        setTotalProducts(0);
+        if (isFirstPage) {
+          setProducts([]);
+          setTotalProducts(0);
+        }
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     }
 
@@ -211,10 +226,34 @@ function ShopContent() {
 
   const handleRetry = () => {
     invalidateCachePrefix('shop:');
+    setPage(1);
     setRefreshTick((t) => t + 1);
   };
 
-  const totalPages = Math.ceil(totalProducts / productsPerPage);
+  const hasMore = products.length < totalProducts;
+
+  const loadMore = useCallback(() => {
+    setPage((p) => p + 1);
+  }, []);
+
+  // Infinite scroll: load the next page when the sentinel enters the viewport
+  useEffect(() => {
+    if (loading || loadingMore || !hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: '600px 0px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, hasMore, loadMore, products.length]);
 
   return (
     <main className="min-h-screen bg-brand-cream">
@@ -479,32 +518,26 @@ function ShopContent() {
                 </>
               )}
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-16 flex justify-center">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="w-10 h-10 flex items-center justify-center border border-brand-taupe rounded-lg hover:bg-brand-cream transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <i className="ri-arrow-left-s-line text-xl text-brand-ink/80"></i>
-                    </button>
+              {/* Infinite scroll loader / sentinel */}
+              {!loading && products.length > 0 && (
+                <>
+                  {loadingMore && (
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-6 sm:gap-6 md:gap-8 mt-6 sm:mt-8">
+                      {[...Array(3)].map((_, i) => (
+                        <ProductCardSkeleton key={`more-${i}`} />
+                      ))}
+                    </div>
+                  )}
 
-                    {/* Simple page numbers - condensed for brevity */}
-                    <span className="px-4 font-medium text-brand-ink/80">
-                      Page {page} of {totalPages}
-                    </span>
+                  {/* Sentinel: when this scrolls into view, the next page loads */}
+                  {hasMore && <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />}
 
-                    <button
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                      className="w-10 h-10 flex items-center justify-center border border-brand-taupe rounded-lg hover:bg-brand-cream transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <i className="ri-arrow-right-s-line text-xl text-brand-ink/80"></i>
-                    </button>
-                  </div>
-                </div>
+                  {!hasMore && (
+                    <p className="mt-12 text-center text-sm text-brand-ink/50">
+                      You&apos;ve reached the end — {totalProducts} {totalProducts === 1 ? 'product' : 'products'}.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
