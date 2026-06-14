@@ -79,12 +79,20 @@ function ShopContent() {
         const { data, count, error } = await cachedQuery<{ data: any; count: any; error: any }>(
           cacheKey,
           async () => {
-            // Left join categories so products without category_id still load (!inner hid them all)
+            const isCategoryFiltered = selectedCategory !== 'all';
+            // Use an INNER join when filtering by category so the category filter
+            // actually restricts the products (a left join leaves non-matching
+            // products in the result with a null category). For "All Products"
+            // keep the left join so uncategorised products still appear.
+            const categoryJoin = isCategoryFiltered
+              ? 'categories!inner(name, slug)'
+              : 'categories(name, slug)';
+
             let query = supabase
               .from('products')
               .select(`
                 *,
-                categories(name, slug),
+                ${categoryJoin},
                 product_images(url, position),
                 product_variants(id, name, price, quantity, option1, option2, image_url)
               `, { count: 'exact' })
@@ -96,15 +104,20 @@ function ShopContent() {
             }
 
             // Category Filter with Subcategories
-            if (selectedCategory !== 'all') {
+            if (isCategoryFiltered) {
               const categoryObj = categories.find(c => c.slug === selectedCategory);
 
               if (categoryObj) {
+                // Only fold in child subcategories when a PARENT category is selected.
+                // When a subcategory is selected, restrict strictly to it.
+                const isParent = categories.some(c => c.parent_id === categoryObj.id);
                 const targetSlugs = [selectedCategory];
-                const childSlugs = categories
-                  .filter(c => c.parent_id === categoryObj.id)
-                  .map(c => c.slug);
-                targetSlugs.push(...childSlugs);
+                if (isParent) {
+                  const childSlugs = categories
+                    .filter(c => c.parent_id === categoryObj.id)
+                    .map(c => c.slug);
+                  targetSlugs.push(...childSlugs);
+                }
                 query = query.in('categories.slug', targetSlugs);
               } else {
                 query = query.eq('categories.slug', selectedCategory);
