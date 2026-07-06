@@ -7,14 +7,14 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Simple in-memory cache
 let cache: { data: any; timestamp: number } | null = null;
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes — categories rarely change
+const CACHE_TTL = 60 * 1000; // 1 minute — keep short so catalog updates appear quickly
 
 export async function GET() {
     // Check cache
     if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
         return NextResponse.json(cache.data, {
             headers: {
-                'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
                 'X-Cache': 'HIT'
             }
         });
@@ -37,7 +37,7 @@ export async function GET() {
 
         return NextResponse.json(data, {
             headers: {
-                'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
                 'X-Cache': 'MISS'
             }
         });

@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Simple in-memory cache
 let cache: { data: any; timestamp: number } | null = null;
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes — products don't change frequently
+const CACHE_TTL = 60 * 1000; // 1 minute — keep short so catalog updates appear quickly
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     if (featured && cache && cache.data?.[cacheKey] && Date.now() - cache.timestamp < CACHE_TTL) {
         return NextResponse.json(cache.data[cacheKey], {
             headers: {
-                'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800',
+                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
                 'X-Cache': 'HIT'
             }
         });
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json(data, {
             headers: {
-                'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800',
+                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
                 'X-Cache': 'MISS'
             }
         });
