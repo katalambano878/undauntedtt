@@ -28,7 +28,7 @@ export function getSiteTagline(): string {
 }
 
 export function getContactEmail(): string {
-  return env('NEXT_PUBLIC_CONTACT_EMAIL') || 'info@undauntedtreasuretrove.com';
+  return env('NEXT_PUBLIC_CONTACT_EMAIL') || 'info@undauntedtt.com';
 }
 
 /** Human-readable phone for display */

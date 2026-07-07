@@ -80,6 +80,16 @@ export default function Footer() {
                 {[siteTagline, contactAddress || null, contactPhone ? `Tel: ${contactPhone}` : null, (contactWhatsapp && contactWhatsapp !== contactPhone) ? `WhatsApp: ${contactWhatsapp}` : null].filter(Boolean).join(' · ') || `${siteTagline}.`}
               </p>
 
+              {contactEmail && (
+                <a
+                  href={`mailto:${contactEmail}`}
+                  className="inline-flex items-center gap-2 text-sm text-brand-cream/80 hover:text-brand-gold transition-colors"
+                >
+                  <i className="ri-mail-line text-base" aria-hidden="true" />
+                  <span>{contactEmail}</span>
+                </a>
+              )}
+
               <div className="flex flex-wrap gap-2 sm:gap-3 pt-1 sm:pt-2">
                 {[
                   { link: socialInstagram, icon: 'ri-instagram-line', label: 'Instagram' },
@@ -100,6 +110,13 @@ export default function Footer() {
                     <i className={social.icon}></i>
                   </a>
                 ))}
+                <Link
+                  href="/admin/login"
+                  aria-label="Admin login"
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-brand-cream/10 border border-brand-cream/20 rounded-full flex items-center justify-center text-brand-cream hover:bg-brand-cream hover:text-brand-caramel hover:border-brand-cream transition-all hover:-translate-y-1 text-sm sm:text-base"
+                >
+                  <i className="ri-shield-user-line" aria-hidden="true" />
+                </Link>
               </div>
             </div>
 
@@ -132,7 +149,6 @@ export default function Footer() {
                   <li><Link href="/about" className="hover:text-brand-gold transition-colors">Our Story</Link></li>
                   <li><Link href="/privacy" className="hover:text-brand-gold transition-colors">Privacy Policy</Link></li>
                   <li><Link href="/terms" className="hover:text-brand-gold transition-colors">Terms of Service</Link></li>
-                  <li><Link href="/admin" className="hover:text-brand-gold transition-colors">Admin Access</Link></li>
                 </ul>
               </div>
 

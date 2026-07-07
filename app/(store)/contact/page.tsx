@@ -182,15 +182,15 @@ export default function ContactPage() {
   const faqs = [
     {
       question: 'What are your delivery times?',
-      answer: 'Standard delivery takes 2-5 business days within Ghana. Express delivery is available for Accra and Kumasi. We package every jewelry order with care to keep it safe in transit.'
+      answer: 'Our delivery days are Tuesday, Thursday and Saturday.'
     },
     {
       question: 'Do you offer international shipping?',
-      answer: 'Currently, we ship within Ghana only. We handle all logistics so you simply order and receive your jewelry.'
+      answer: 'We offer international shipping and all international clients should state their preferred shipping company.'
     },
     {
       question: 'What payment methods do you accept?',
-      answer: 'We accept MOMO, Instant Bank Transfer, Cash (in store only), and Visa Card. Please note we do not accept payment on delivery.'
+      answer: 'Modes of payment: mobile money and Visa card payments.'
     }
   ];
 
