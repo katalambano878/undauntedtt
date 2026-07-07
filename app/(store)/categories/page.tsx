@@ -93,17 +93,37 @@ export default async function CategoriesPage() {
                       Shop by type
                     </p>
                     {subcategories.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                        {subcategories.map((child) => (
-                          <Link
-                            key={child.id}
-                            href={`/shop?category=${child.slug}`}
-                            className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-brand-taupe/30 bg-white/60 hover:border-brand-caramel hover:bg-brand-cream transition-colors group"
-                          >
-                            <span className="font-medium text-brand-ink group-hover:text-brand-bronze">{child.name}</span>
-                            <i className="ri-arrow-right-s-line text-brand-bronze shrink-0" />
-                          </Link>
-                        ))}
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        {subcategories.map((child) => {
+                          const childImage = child.image_url || null;
+                          return (
+                            <Link
+                              key={child.id}
+                              href={`/shop?category=${child.slug}`}
+                              className="group overflow-hidden rounded-xl border border-brand-taupe/30 bg-white/60 hover:border-brand-caramel hover:shadow-md transition-all"
+                            >
+                              <div className="relative aspect-[4/3] bg-brand-cream overflow-hidden">
+                                {childImage ? (
+                                  <img
+                                    src={childImage}
+                                    alt={child.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-cream to-brand-taupe/20">
+                                    <i className={`${style.icon} text-3xl text-brand-bronze/40`} />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-2">
+                                <span className="font-medium text-sm sm:text-base text-brand-ink group-hover:text-brand-bronze line-clamp-2">
+                                  {child.name}
+                                </span>
+                                <i className="ri-arrow-right-s-line text-brand-bronze shrink-0" />
+                              </div>
+                            </Link>
+                          );
+                        })}
                       </div>
                     ) : (
                       <Link
