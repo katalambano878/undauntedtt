@@ -32,14 +32,14 @@ export default async function CategoriesPage() {
     .filter((c) => !c.parent_id)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const childrenByParent = new Map<string, typeof categoriesData>();
+  const childrenByParent = new Map<string, NonNullable<typeof categoriesData>>();
   for (const cat of categoriesData ?? []) {
     if (!cat.parent_id) continue;
     const list = childrenByParent.get(cat.parent_id) ?? [];
     list.push(cat);
     childrenByParent.set(cat.parent_id, list);
   }
-  for (const [, list] of childrenByParent) {
+  for (const list of childrenByParent.values()) {
     list.sort((a, b) => a.name.localeCompare(b.name));
   }
 
