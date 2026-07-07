@@ -9,6 +9,7 @@ import { getColorHex } from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, invalidateCachePrefix } from '@/lib/query-cache';
 import PageHero from '@/components/PageHero';
+import { sortParentCategories } from '@/lib/category-order';
 
 function ShopContent() {
   usePageTitle('Shop All Products');
@@ -65,9 +66,9 @@ function ShopContent() {
     });
   };
 
-  const parentCategories = categories
-    .filter((c) => !c.parent_id && c.id !== 'all')
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const parentCategories = sortParentCategories(
+    categories.filter((c) => !c.parent_id && c.id !== 'all')
+  );
 
   // Fetch Categories from cached API
   useEffect(() => {

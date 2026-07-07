@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import PageHero from '@/components/PageHero';
+import { sortParentCategories } from '@/lib/category-order';
 
 export const revalidate = 0;
 
@@ -28,9 +29,9 @@ export default async function CategoriesPage() {
     .eq('status', 'active')
     .order('name', { ascending: true });
 
-  const parents = (categoriesData ?? [])
-    .filter((c) => !c.parent_id)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const parents = sortParentCategories(
+    (categoriesData ?? []).filter((c) => !c.parent_id)
+  );
 
   const childrenByParent = new Map<string, NonNullable<typeof categoriesData>>();
   for (const cat of categoriesData ?? []) {
