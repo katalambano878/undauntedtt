@@ -29,6 +29,7 @@ function ShopContent() {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState('popular');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const productsPerPage = 12;
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -43,6 +44,30 @@ function ShopContent() {
     if (sort) setSortBy(sort);
     // Search is handled in the fetch function via searchParams directly or we could add a state for it
   }, [searchParams]);
+
+  // Keep the active category's parent expanded in the sidebar
+  useEffect(() => {
+    if (selectedCategory === 'all' || categories.length <= 1) return;
+    const selected = categories.find((c) => c.slug === selectedCategory);
+    if (!selected) return;
+    const parentId = selected.parent_id ?? selected.id;
+    if (categories.some((c) => c.parent_id === parentId)) {
+      setExpandedParents((prev) => new Set(prev).add(parentId));
+    }
+  }, [selectedCategory, categories]);
+
+  const toggleParentExpanded = (parentId: string) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentId)) next.delete(parentId);
+      else next.add(parentId);
+      return next;
+    });
+  };
+
+  const parentCategories = categories
+    .filter((c) => !c.parent_id && c.id !== 'all')
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Fetch Categories from cached API
   useEffect(() => {
@@ -294,8 +319,8 @@ function ShopContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col lg:flex-row gap-8">
             <aside className={`${isFilterOpen ? 'fixed inset-0 z-50 bg-brand-cream overflow-y-auto' : 'hidden'} lg:block lg:w-64 lg:flex-shrink-0`}>
-              <div className="lg:sticky lg:top-24">
-                <div className="bg-brand-cream lg:bg-transparent p-6 lg:p-0">
+              <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:overscroll-contain">
+                <div className="bg-brand-cream lg:bg-transparent p-6 lg:p-0 lg:pr-2">
                   <div className="flex items-center justify-between mb-6 lg:hidden">
                     <h2 className="text-xl font-bold text-brand-ink">Filters</h2>
                     <button
@@ -309,15 +334,41 @@ function ShopContent() {
                   <div className="space-y-8">
                     {/* Categories */}
                     <div>
-                      <h3 className="font-semibold text-brand-ink mb-4">Categories</h3>
-                      <div className="space-y-1">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-brand-ink">Categories</h3>
+                        {parentCategories.some((p) => categories.some((c) => c.parent_id === p.id)) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const withChildren = parentCategories.filter((p) =>
+                                categories.some((c) => c.parent_id === p.id)
+                              );
+                              const allExpanded = withChildren.every((p) => expandedParents.has(p.id));
+                              setExpandedParents(
+                                allExpanded
+                                  ? new Set<string>()
+                                  : new Set(withChildren.map((p) => p.id))
+                              );
+                            }}
+                            className="text-xs font-medium text-brand-bronze hover:text-brand-caramel transition-colors"
+                          >
+                            {parentCategories.every(
+                              (p) =>
+                                !categories.some((c) => c.parent_id === p.id) || expandedParents.has(p.id)
+                            )
+                              ? 'Collapse all'
+                              : 'Expand all'}
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-[min(52vh,420px)] overflow-y-auto overscroll-y-contain pr-1 space-y-1 border border-brand-taupe/25 rounded-xl p-2 bg-brand-cream/50">
                         <button
                           onClick={() => {
                             setSelectedCategory('all');
                             setPage(1);
                             setIsFilterOpen(false);
                           }}
-                          className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedCategory === 'all'
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${selectedCategory === 'all'
                             ? 'bg-brand-bronze text-brand-cream font-medium'
                             : 'text-brand-ink/80 hover:bg-brand-cream'
                             }`}
@@ -325,46 +376,71 @@ function ShopContent() {
                           All Products
                         </button>
 
-                        {/* Parent Categories */}
-                        {categories.filter(c => !c.parent_id && c.id !== 'all').map(parent => {
-                          const subcategories = categories.filter(c => c.parent_id === parent.id);
+                        {parentCategories.map((parent) => {
+                          const subcategories = categories
+                            .filter((c) => c.parent_id === parent.id)
+                            .sort((a, b) => a.name.localeCompare(b.name));
                           const isSelected = selectedCategory === parent.slug;
-                          const isChildSelected = subcategories.some(sub => sub.slug === selectedCategory);
-                          const isOpen = isSelected || isChildSelected; // Auto-expand if selected
+                          const isChildSelected = subcategories.some((sub) => sub.slug === selectedCategory);
+                          const isExpanded = expandedParents.has(parent.id) || isChildSelected;
+                          const hasChildren = subcategories.length > 0;
 
                           return (
-                            <div key={parent.id} className="space-y-1">
-                              <button
-                                onClick={() => {
-                                  setSelectedCategory(parent.slug);
-                                  setPage(1);
-                                  // Don't close filter immediately if exploring hierarchy
-                                }}
-                                className={`w-full text-left px-4 py-2 rounded-lg transition-colors flex justify-between items-center ${isSelected
-                                  ? 'bg-brand-caramel/20 text-brand-bronze font-medium'
-                                  : 'text-brand-ink/80 hover:bg-brand-cream'
+                            <div key={parent.id} className="space-y-0.5">
+                              <div
+                                className={`flex items-stretch rounded-lg transition-colors ${isSelected && !isChildSelected
+                                  ? 'bg-brand-caramel/20'
+                                  : isChildSelected
+                                    ? 'bg-brand-caramel/10'
+                                    : 'hover:bg-brand-cream'
                                   }`}
                               >
-                                <span>{parent.name}</span>
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCategory(parent.slug);
+                                    setPage(1);
+                                    if (hasChildren) {
+                                      setExpandedParents((prev) => new Set(prev).add(parent.id));
+                                    }
+                                  }}
+                                  className={`flex-1 text-left px-3 py-2 min-w-0 ${isSelected || isChildSelected
+                                    ? 'text-brand-bronze font-medium'
+                                    : 'text-brand-ink/80'
+                                    }`}
+                                >
+                                  <span className="block truncate">{parent.name}</span>
+                                </button>
+                                {hasChildren && (
+                                  <button
+                                    type="button"
+                                    aria-expanded={isExpanded}
+                                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${parent.name}`}
+                                    onClick={() => toggleParentExpanded(parent.id)}
+                                    className="px-2 flex items-center justify-center text-brand-ink/50 hover:text-brand-bronze shrink-0"
+                                  >
+                                    <i className={`text-lg transition-transform duration-200 ${isExpanded ? 'ri-arrow-down-s-line' : 'ri-arrow-right-s-line'}`}></i>
+                                  </button>
+                                )}
+                              </div>
 
-                              {/* Subcategories */}
-                              {subcategories.length > 0 && (
-                                <div className="ml-4 border-l-2 border-brand-taupe/30 pl-2 space-y-1">
-                                  {subcategories.map(child => (
+                              {hasChildren && isExpanded && (
+                                <div className="ml-3 border-l-2 border-brand-taupe/30 pl-2 space-y-0.5 pb-1">
+                                  {subcategories.map((child) => (
                                     <button
                                       key={child.id}
+                                      type="button"
                                       onClick={() => {
                                         setSelectedCategory(child.slug);
                                         setPage(1);
                                         setIsFilterOpen(false);
                                       }}
-                                      className={`w-full text-left px-4 py-1.5 rounded-lg text-sm transition-colors ${selectedCategory === child.slug
+                                      className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedCategory === child.slug
                                         ? 'text-brand-bronze font-medium bg-brand-caramel/15'
                                         : 'text-brand-ink/70 hover:text-brand-ink hover:bg-brand-cream'
                                         }`}
                                     >
-                                      {child.name}
+                                      <span className="block truncate">{child.name}</span>
                                     </button>
                                   ))}
                                 </div>

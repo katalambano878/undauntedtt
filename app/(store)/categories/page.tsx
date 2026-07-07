@@ -2,7 +2,16 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import PageHero from '@/components/PageHero';
 
-export const revalidate = 0; // Ensure fresh data on every visit
+export const revalidate = 0;
+
+const palette = [
+  { color: 'from-[#bd956a] to-[#8e623b]', icon: 'ri-store-2-line' },
+  { color: 'from-[#c3b19b] to-[#8e623b]', icon: 'ri-shopping-bag-3-line' },
+  { color: 'from-[#d4af37] to-[#8e623b]', icon: 'ri-t-shirt-line' },
+  { color: 'from-[#bd956a] to-[#5e3f1f]', icon: 'ri-home-smile-line' },
+  { color: 'from-[#d4af37] to-[#bd956a]', icon: 'ri-heart-line' },
+  { color: 'from-[#8e623b] to-[#5e3f1f]', icon: 'ri-star-smile-line' },
+];
 
 export default async function CategoriesPage() {
   const { data: categoriesData } = await supabase
@@ -13,84 +22,105 @@ export default async function CategoriesPage() {
       slug,
       description,
       image_url,
+      parent_id,
       position
     `)
     .eq('status', 'active')
-    .order('position', { ascending: true });
+    .order('name', { ascending: true });
 
-  // Palette to cycle through for visual variety since DB doesn't have colors.
-  // All gradients now stay within the warm bronze/caramel/gold family so the
-  // category grid feels cohesive with the rest of the site.
-  const palette = [
-    { color: 'from-[#bd956a] to-[#8e623b]', icon: 'ri-store-2-line' },
-    { color: 'from-[#c3b19b] to-[#8e623b]', icon: 'ri-shopping-bag-3-line' },
-    { color: 'from-[#d4af37] to-[#8e623b]', icon: 'ri-t-shirt-line' },
-    { color: 'from-[#bd956a] to-[#5e3f1f]', icon: 'ri-home-smile-line' },
-    { color: 'from-[#d4af37] to-[#bd956a]', icon: 'ri-heart-line' },
-    { color: 'from-[#8e623b] to-[#5e3f1f]', icon: 'ri-star-smile-line' },
-  ];
+  const parents = (categoriesData ?? [])
+    .filter((c) => !c.parent_id)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  const categories = categoriesData?.map((c, i) => {
-    const style = palette[i % palette.length];
-    return {
-      ...c,
-      image: c.image_url || 'https://via.placeholder.com/600x400?text=Category',
-      color: style.color,
-      icon: style.icon,
-      // Optional: Fetch product count if needed, currently skipping for performance/simplicity
-      productCount: 'Browse',
-    };
-  }) || [];
+  const childrenByParent = new Map<string, typeof categoriesData>();
+  for (const cat of categoriesData ?? []) {
+    if (!cat.parent_id) continue;
+    const list = childrenByParent.get(cat.parent_id) ?? [];
+    list.push(cat);
+    childrenByParent.set(cat.parent_id, list);
+  }
+  for (const [, list] of childrenByParent) {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  }
 
   return (
     <div className="min-h-screen bg-brand-cream">
       <PageHero
         title="Shop by Category"
-        subtitle="Browse our jewelry categories"
+        subtitle="Pick a collection, then choose the type that fits you"
         backgroundImage="/page-hero-4.png"
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-        {categories.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/shop?category=${category.slug}`}
-                className="group bg-brand-cream border border-brand-taupe/40 rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-2xl hover:border-brand-caramel transition-all cursor-pointer"
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-10 sm:space-y-14">
+        {parents.length > 0 ? (
+          parents.map((parent, i) => {
+            const style = palette[i % palette.length];
+            const image = parent.image_url || 'https://via.placeholder.com/600x400?text=Category';
+            const subcategories = childrenByParent.get(parent.id) ?? [];
+
+            return (
+              <section
+                key={parent.id}
+                className="bg-brand-cream border border-brand-taupe/40 rounded-2xl overflow-hidden shadow-sm"
               >
-                <div className="relative h-28 sm:h-40 md:h-48 overflow-hidden">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className={`absolute inset-0 bg-gradient-to-t ${category.color} opacity-0 group-hover:opacity-30 transition-opacity`}></div>
-                </div>
-                <div className="p-3 sm:p-5 md:p-6">
-                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                    <div className={`w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-gradient-to-br ${category.color} rounded-full flex items-center justify-center flex-shrink-0`}>
-                      <i className={`${category.icon} text-base sm:text-xl md:text-2xl text-brand-cream`}></i>
+                <div className="grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+                  <Link
+                    href={`/shop?category=${parent.slug}`}
+                    className="group relative min-h-[180px] sm:min-h-[220px] overflow-hidden"
+                  >
+                    <img
+                      src={image}
+                      alt={parent.name}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className={`absolute inset-0 bg-gradient-to-t ${style.color} opacity-35`} />
+                    <div className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-11 h-11 bg-gradient-to-br ${style.color} rounded-full flex items-center justify-center shrink-0`}>
+                          <i className={`${style.icon} text-xl text-brand-cream`} />
+                        </div>
+                        <div>
+                          <h2 className="text-xl sm:text-2xl font-bold text-brand-cream drop-shadow">{parent.name}</h2>
+                          <p className="text-sm text-brand-cream/90">Browse all {parent.name.toLowerCase()}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm sm:text-lg md:text-xl font-bold text-brand-ink truncate">{category.name}</h3>
-                      <p className="text-[10px] sm:text-xs md:text-sm text-brand-ink/50">Collection</p>
-                    </div>
-                  </div>
-                  <p className="text-brand-ink/70 leading-relaxed text-xs sm:text-sm mb-2 sm:mb-4 line-clamp-2">
-                    {category.description || 'Explore our exclusive collection in this category.'}
-                  </p>
-                  <div className="flex items-center text-brand-bronze font-medium text-xs sm:text-sm group-hover:gap-2 transition-all">
-                    <span>Browse</span>
-                    <i className="ri-arrow-right-line ml-1.5 sm:ml-2"></i>
+                  </Link>
+
+                  <div className="p-5 sm:p-6 md:p-8">
+                    <p className="text-sm font-semibold text-brand-ink/60 uppercase tracking-wide mb-4">
+                      Shop by type
+                    </p>
+                    {subcategories.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                        {subcategories.map((child) => (
+                          <Link
+                            key={child.id}
+                            href={`/shop?category=${child.slug}`}
+                            className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-brand-taupe/30 bg-white/60 hover:border-brand-caramel hover:bg-brand-cream transition-colors group"
+                          >
+                            <span className="font-medium text-brand-ink group-hover:text-brand-bronze">{child.name}</span>
+                            <i className="ri-arrow-right-s-line text-brand-bronze shrink-0" />
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <Link
+                        href={`/shop?category=${parent.slug}`}
+                        className="inline-flex items-center gap-2 text-brand-bronze font-medium hover:text-brand-caramel"
+                      >
+                        View collection
+                        <i className="ri-arrow-right-line" />
+                      </Link>
+                    )}
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
+              </section>
+            );
+          })
         ) : (
           <div className="text-center py-20 bg-brand-ice rounded-xl">
-            <i className="ri-inbox-line text-5xl text-brand-taupe mb-4"></i>
+            <i className="ri-inbox-line text-5xl text-brand-taupe mb-4" />
             <p className="text-xl text-brand-ink/60">No categories found.</p>
           </div>
         )}
@@ -107,14 +137,14 @@ export default async function CategoriesPage() {
               href="/shop"
               className="inline-flex items-center gap-2 bg-brand-cream text-brand-bronze px-5 sm:px-8 py-3 sm:py-4 rounded-full font-medium text-sm sm:text-base hover:bg-white transition-colors whitespace-nowrap"
             >
-              <i className="ri-search-line"></i>
+              <i className="ri-search-line" />
               Search All Products
             </Link>
             <Link
               href="/contact"
               className="inline-flex items-center gap-2 bg-brand-bronze text-brand-cream border border-brand-cream/30 px-5 sm:px-8 py-3 sm:py-4 rounded-full font-medium text-sm sm:text-base hover:bg-[#5e3f1f] transition-colors whitespace-nowrap"
             >
-              <i className="ri-customer-service-line"></i>
+              <i className="ri-customer-service-line" />
               Contact Support
             </Link>
           </div>
