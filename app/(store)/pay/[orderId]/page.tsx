@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import BrandLogo from '@/components/BrandLogo';
 
+const hubtelEnabled = process.env.NEXT_PUBLIC_ENABLE_HUBTEL === 'true';
+
 export default function PaymentPage() {
   usePageTitle('Complete Payment');
   const params = useParams();
@@ -17,6 +19,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'hubtel' | 'moolre'>(hubtelEnabled ? 'hubtel' : 'moolre');
 
   useEffect(() => {
     async function fetchOrder() {
@@ -37,6 +40,13 @@ export default function PaymentPage() {
         }
 
         setOrder(data);
+
+        const storedMethod = data.metadata?.payment_method;
+        if (storedMethod === 'hubtel' || storedMethod === 'moolre') {
+          setPaymentMethod(storedMethod);
+        } else if (hubtelEnabled) {
+          setPaymentMethod('hubtel');
+        }
 
         // If already paid, redirect to success page
         if (data.payment_status === 'paid') {
@@ -64,12 +74,14 @@ export default function PaymentPage() {
     setError(null);
 
     try {
-      const paymentRes = await fetch('/api/payment/moolre', {
+      const paymentEndpoint =
+        paymentMethod === 'hubtel' ? '/api/payment/hubtel' : '/api/payment/moolre';
+
+      const paymentRes = await fetch(paymentEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: order.order_number,
-          amount: order.total,
           customerEmail: order.email
         })
       });
@@ -80,7 +92,6 @@ export default function PaymentPage() {
         throw new Error(paymentResult.message || 'Payment initialization failed');
       }
 
-      // Redirect to Moolre payment page
       window.location.href = paymentResult.url;
 
     } catch (err: any) {
@@ -202,6 +213,42 @@ export default function PaymentPage() {
           </div>
         )}
 
+        {hubtelEnabled && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Payment Method</h2>
+            <div className="space-y-3">
+              <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'hubtel' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="hubtel"
+                  checked={paymentMethod === 'hubtel'}
+                  onChange={() => setPaymentMethod('hubtel')}
+                  className="w-5 h-5 text-brand-bronze mt-0.5"
+                />
+                <div>
+                  <p className="font-semibold text-gray-900">Mobile Money / Card</p>
+                  <p className="text-sm text-gray-600">Hubtel — MTN, Telecel, AirtelTigo, or Visa</p>
+                </div>
+              </label>
+              <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'moolre' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="moolre"
+                  checked={paymentMethod === 'moolre'}
+                  onChange={() => setPaymentMethod('moolre')}
+                  className="w-5 h-5 text-brand-bronze mt-0.5"
+                />
+                <div>
+                  <p className="font-semibold text-gray-900">Mobile Money (Backup)</p>
+                  <p className="text-sm text-gray-600">Moolre — alternative gateway</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        )}
+
         {/* Pay Button */}
         <button
           onClick={handlePayNow}
@@ -219,7 +266,8 @@ export default function PaymentPage() {
           ) : (
             <>
               <i className="ri-secure-payment-line mr-2"></i>
-              Pay GH₵ {order?.total?.toFixed(2)} with Mobile Money
+              Pay GH₵ {order?.total?.toFixed(2)}
+              {paymentMethod === 'hubtel' ? ' with Hubtel' : ' with Mobile Money'}
             </>
           )}
         </button>
@@ -228,7 +276,7 @@ export default function PaymentPage() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 flex items-center justify-center">
             <i className="ri-lock-line mr-1"></i>
-            Secure payment powered by Moolre
+            Secure payment powered by {paymentMethod === 'hubtel' ? 'Hubtel' : 'Moolre'}
           </p>
         </div>
 

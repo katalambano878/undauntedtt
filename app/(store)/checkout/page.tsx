@@ -54,8 +54,11 @@ export default function CheckoutPage() {
     'Western North'
   ];
 
+  const hubtelEnabled = process.env.NEXT_PUBLIC_ENABLE_HUBTEL === 'true';
+  const defaultGateway = hubtelEnabled ? 'hubtel' : 'moolre';
+
   const [deliveryMethod, setDeliveryMethod] = useState('pickup');
-  const [paymentMethod, setPaymentMethod] = useState('moolre');
+  const [paymentMethod, setPaymentMethod] = useState(defaultGateway);
   const [errors, setErrors] = useState<any>({});
 
 
@@ -115,7 +118,6 @@ export default function CheckoutPage() {
   };
 
   const handleContinueToPayment = async () => {
-    // Skip step 3 and directly initiate payment with default method (Moolre/Mobile Money)
     await handlePlaceOrder();
   };
 
@@ -247,16 +249,16 @@ export default function CheckoutPage() {
       });
 
       // 4. Handle Payment Redirects or Completion
-      if (paymentMethod === 'moolre') {
+      if (paymentMethod === 'hubtel' || paymentMethod === 'moolre') {
         try {
-          // Payment link reminder will be sent automatically after 15 mins if unpaid (via cron)
+          const paymentEndpoint =
+            paymentMethod === 'hubtel' ? '/api/payment/hubtel' : '/api/payment/moolre';
 
-          const paymentRes = await fetch('/api/payment/moolre', {
+          const paymentRes = await fetch(paymentEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               orderId: orderNumber,
-              amount: total,
               customerEmail: shippingData.email
             })
           });
@@ -267,10 +269,7 @@ export default function CheckoutPage() {
             throw new Error(paymentResult.message || 'Payment initialization failed');
           }
 
-          // Clear cart before redirecting
           clearCart();
-
-          // Redirect to Moolre
           window.location.href = paymentResult.url;
           return;
 
@@ -278,7 +277,7 @@ export default function CheckoutPage() {
           console.error('Payment Error:', paymentErr);
           alert('Failed to initialize payment: ' + paymentErr.message);
           setIsLoading(false);
-          return; // Stop execution
+          return;
         }
       }
 
@@ -595,6 +594,48 @@ export default function CheckoutPage() {
                     */}
                   </div>
 
+                  {hubtelEnabled && (
+                    <div className="mt-8 pt-6 border-t border-gray-200">
+                      <h2 className="text-xl font-bold text-gray-900 mb-2">Payment Method</h2>
+                      <p className="text-sm text-gray-600 mb-4">Pay with Mobile Money or Visa card.</p>
+                      <div className="space-y-3">
+                        <label className={`flex items-start justify-between gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'hubtel' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
+                          <div className="flex items-start gap-3 flex-1">
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value="hubtel"
+                              checked={paymentMethod === 'hubtel'}
+                              onChange={() => setPaymentMethod('hubtel')}
+                              className="w-5 h-5 text-brand-bronze mt-0.5"
+                            />
+                            <div>
+                              <p className="font-semibold text-gray-900">Mobile Money / Card</p>
+                              <p className="text-sm text-gray-600">MTN, Telecel, AirtelTigo Mobile Money, or Visa card. Powered by Hubtel.</p>
+                            </div>
+                          </div>
+                        </label>
+
+                        <label className={`flex items-start justify-between gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'moolre' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
+                          <div className="flex items-start gap-3 flex-1">
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value="moolre"
+                              checked={paymentMethod === 'moolre'}
+                              onChange={() => setPaymentMethod('moolre')}
+                              className="w-5 h-5 text-brand-bronze mt-0.5"
+                            />
+                            <div>
+                              <p className="font-semibold text-gray-900">Mobile Money (Backup)</p>
+                              <p className="text-sm text-gray-600">Alternative Mobile Money gateway. Use if Hubtel is unavailable.</p>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-col-reverse md:flex-row gap-4 mt-6">
                     <button
                       onClick={() => setCurrentStep(1)}
@@ -616,6 +657,8 @@ export default function CheckoutPage() {
                           </svg>
                           Processing...
                         </>
+                      ) : paymentMethod === 'hubtel' ? (
+                        'Pay with Mobile Money / Card'
                       ) : (
                         'Pay with Mobile Money'
                       )}

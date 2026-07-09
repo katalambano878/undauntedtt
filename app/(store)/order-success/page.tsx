@@ -47,14 +47,12 @@ function OrderSuccessContent() {
     fetchOrder();
   }, [orderNumber, paymentSuccess]);
 
-  // Payment verification - called when user is redirected from Moolre with payment_success=true
+  // Payment verification - called when user is redirected from payment gateway
   const verifyPayment = async (orderNum: string, initialOrder: any) => {
     setVerifying(true);
     
-    // Wait 3 seconds to give the callback a chance to process first
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Re-fetch order to check if callback already updated it
     const { data: refreshed } = await supabase
       .from('orders')
       .select('*, order_items (*)')
@@ -67,20 +65,26 @@ function OrderSuccessContent() {
       return;
     }
 
-    // Callback hasn't fired - verify via our endpoint
-    // Verify payment via Moolre API — we no longer trust the redirect alone
+    const gateway = refreshed?.metadata?.payment_method || initialOrder?.metadata?.payment_method || 'moolre';
+    const verifyEndpoint =
+      gateway === 'hubtel' ? '/api/payment/hubtel/verify' : '/api/payment/moolre/verify';
+
     try {
-      const res = await fetch('/api/payment/moolre/verify', {
+      const body: Record<string, string> = { orderNumber: orderNum };
+      if (gateway === 'hubtel' && refreshed?.metadata?.hubtel_client_reference) {
+        body.externalRef = refreshed.metadata.hubtel_client_reference;
+      }
+
+      const res = await fetch(verifyEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderNumber: orderNum })
+        body: JSON.stringify(body)
       });
       
       const result = await res.json();
       console.log('Payment verification result:', result);
       
       if (result.success && result.payment_status === 'paid') {
-        // Re-fetch full order data
         const { data: updated } = await supabase
           .from('orders')
           .select('*, order_items (*)')
