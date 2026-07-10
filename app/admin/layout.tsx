@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BrandLogo from '@/components/BrandLogo';
+import ChangePasswordModal from '@/components/admin/ChangePasswordModal';
 
 // Only set the `Secure` cookie attribute over HTTPS, otherwise browsers
 // silently drop it on localhost and the admin gets stuck in a login loop.
@@ -29,6 +30,7 @@ export default function AdminLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -355,6 +357,16 @@ export default function AdminLayout({
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20">
                     <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        setShowChangePassword(true);
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left cursor-pointer"
+                    >
+                      <i className="ri-lock-password-line text-gray-600 w-5 h-5 flex items-center justify-center"></i>
+                      <span className="text-gray-700">Change Password</span>
+                    </button>
+                    <button
                       onClick={handleLogout}
                       className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors border-t border-gray-200 text-left cursor-pointer"
                     >
@@ -372,6 +384,13 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+
+      {showChangePassword && user?.email && (
+        <ChangePasswordModal
+          email={user.email}
+          onClose={() => setShowChangePassword(false)}
+        />
+      )}
     </div>
   );
 }
