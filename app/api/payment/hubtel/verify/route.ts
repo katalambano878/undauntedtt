@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendOrderConfirmation } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
-import { checkHubtelStatus, isHubtelPaid } from '@/lib/hubtel';
+import { checkHubtelStatus, hubtelAmountMatches, isHubtelPaid } from '@/lib/hubtel';
 
 export async function POST(req: Request) {
     try {
@@ -86,17 +86,12 @@ export async function POST(req: Request) {
             orderNumber;
 
         let verified = false;
-        let settlementAmount: number | null = null;
+        let statusData: Awaited<ReturnType<typeof checkHubtelStatus>>['data'] = undefined;
         try {
             const status = await checkHubtelStatus(statusRef);
             const sStatus = String(status?.data?.status || '').toLowerCase();
             verified = isHubtelPaid(sStatus, status?.responseCode);
-            const settlement =
-                status?.data?.amountAfterCharges ?? status?.data?.amount;
-            if (settlement !== undefined && settlement !== null) {
-                const n = parseFloat(String(settlement));
-                if (Number.isFinite(n)) settlementAmount = n;
-            }
+            statusData = status?.data;
             console.log(
                 '[Hubtel Verify] ref:',
                 statusRef,
@@ -104,17 +99,25 @@ export async function POST(req: Request) {
                 status?.data?.status,
                 '| expected:',
                 expectedAmount,
+                '| gross:',
+                status?.data?.amount,
+                '| afterCharges:',
+                status?.data?.amountAfterCharges,
             );
         } catch (e: any) {
             console.warn('[Hubtel Verify] Status API failed:', e?.message || e);
         }
 
-        if (verified && settlementAmount !== null && Math.abs(settlementAmount - expectedAmount) > 0.01) {
+        // Accept a match on either the gross customer charge or the net
+        // merchant settlement — see hubtelAmountMatches for why.
+        if (verified && !hubtelAmountMatches(expectedAmount, statusData)) {
             console.error(
                 '[Hubtel Verify] AMOUNT MISMATCH. Expected:',
                 expectedAmount,
-                'Got (settlement):',
-                settlementAmount,
+                'Got gross:',
+                statusData?.amount,
+                '| afterCharges:',
+                statusData?.amountAfterCharges,
             );
             verified = false;
         }

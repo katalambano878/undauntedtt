@@ -4,9 +4,14 @@ import { sendOrderConfirmation } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import {
     checkHubtelStatus,
+    hubtelAmountMatches,
+    isHubtelFailure,
     isHubtelPaid,
     stripHubtelReferenceSuffix,
 } from '@/lib/hubtel';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     console.log('[Hubtel Callback] POST received at', new Date().toISOString());
@@ -73,10 +78,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, message: 'Missing client reference' }, { status: 400 });
         }
 
-        const innerStatus = String(data.Status ?? topStatus ?? '').toLowerCase();
-        const looksSuccessful =
-            isHubtelPaid(String(topStatus || ''), responseCode) || isHubtelPaid(innerStatus, responseCode);
-
         const { data: existingOrder, error: fetchError } = await supabaseAdmin
             .from('orders')
             .select('id, order_number, payment_status, total, email, metadata')
@@ -85,7 +86,8 @@ export async function POST(req: Request) {
 
         if (fetchError || !existingOrder) {
             console.error('[Hubtel Callback] Order not found:', merchantOrderRef);
-            return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
+            // 200 so Hubtel doesn't keep retrying a reference we'll never match.
+            return NextResponse.json({ success: false, message: 'Order not found' });
         }
 
         const expectedAmount = Number(existingOrder.total) || 0;
@@ -94,63 +96,64 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true, message: 'Order already processed' });
         }
 
-        if (!looksSuccessful) {
-            console.log('[Hubtel Callback] Recording failure for', merchantOrderRef);
-            await supabaseAdmin
-                .from('orders')
-                .update({
-                    payment_status: 'failed',
-                    metadata: {
-                        ...(existingOrder.metadata || {}),
-                        hubtel_checkout_id: checkoutId || null,
-                        hubtel_response_code: String(responseCode || ''),
-                        failure_reason: data.Description || body.Message || 'Payment failed',
-                    },
-                })
-                .eq('order_number', merchantOrderRef);
-
-            return NextResponse.json({ success: false, message: 'Payment not successful' });
-        }
-
+        // The callback body is only a wake-up signal — never trust it alone.
+        // Always re-verify against Hubtel's RMSC status API.
         let serverConfirmed = false;
-        let confirmedSettlement: number | null = null;
+        let statusData: Awaited<ReturnType<typeof checkHubtelStatus>>['data'] = undefined;
         try {
             const status = await checkHubtelStatus(rawClientReference || merchantOrderRef);
             const sStatus = String(status?.data?.status || '').toLowerCase();
             serverConfirmed = isHubtelPaid(sStatus, status?.responseCode);
-            const settlement =
-                status?.data?.amountAfterCharges ?? status?.data?.amount;
-            if (settlement !== undefined && settlement !== null) {
-                const n = parseFloat(String(settlement));
-                if (Number.isFinite(n)) confirmedSettlement = n;
-            }
+            statusData = status?.data;
             console.log(
                 '[Hubtel Callback] RMSC status:',
                 status?.data?.status,
                 '| expected:',
                 expectedAmount,
-                '| settlement:',
-                confirmedSettlement,
+                '| gross:',
+                status?.data?.amount,
+                '| afterCharges:',
+                status?.data?.amountAfterCharges,
             );
         } catch (e: any) {
             console.warn('[Hubtel Callback] Status re-verification failed:', e?.message || e);
         }
 
         if (!serverConfirmed) {
-            console.error('[Hubtel Callback] Status endpoint did not confirm payment. Rejecting.');
-            return NextResponse.json(
-                { success: false, message: 'Payment not confirmed by gateway' },
-                { status: 400 },
-            );
+            const innerStatus = String(data.Status ?? topStatus ?? '');
+            if (isHubtelFailure(innerStatus, responseCode != null ? String(responseCode) : null)) {
+                console.log('[Hubtel Callback] Recording failure for', merchantOrderRef);
+                await supabaseAdmin
+                    .from('orders')
+                    .update({
+                        payment_status: 'failed',
+                        metadata: {
+                            ...(existingOrder.metadata || {}),
+                            hubtel_checkout_id: checkoutId || null,
+                            hubtel_response_code: String(responseCode || ''),
+                            failure_reason: data.Description || body.Message || 'Payment failed',
+                            failed_at: new Date().toISOString(),
+                        },
+                    })
+                    .eq('order_number', merchantOrderRef);
+
+                return NextResponse.json({ success: true, message: 'Failure recorded' });
+            }
+
+            console.log('[Hubtel Callback] Non-terminal status — no action taken.');
+            return NextResponse.json({ success: true, message: 'Status pending or ignored' });
         }
 
-        const amountToCheck = confirmedSettlement ?? callbackAmount;
-        if (amountToCheck !== null && Math.abs(amountToCheck - expectedAmount) > 0.01) {
+        // Accept a match on either the gross customer charge or the net
+        // merchant settlement — see hubtelAmountMatches for why.
+        if (!hubtelAmountMatches(expectedAmount, statusData, callbackAmount)) {
             console.error(
                 '[Hubtel Callback] AMOUNT MISMATCH! Expected:',
                 expectedAmount,
-                'Got:',
-                amountToCheck,
+                'Got gross:',
+                statusData?.amount,
+                '| afterCharges:',
+                statusData?.amountAfterCharges,
             );
             return NextResponse.json(
                 { success: false, message: 'Payment amount does not match expected charge' },

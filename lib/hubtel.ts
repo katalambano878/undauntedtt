@@ -165,6 +165,37 @@ export function isHubtelPaid(
     return s === 'paid' || s === 'success' || s === 'successful' || s === 'completed';
 }
 
+/**
+ * True when the Hubtel-reported amounts are consistent with what we charged.
+ *
+ * Hubtel's status API reports both the gross transaction amount (what the
+ * customer paid) and `amountAfterCharges` (the merchant settlement, net of
+ * Hubtel's fee). Depending on the merchant account's fee configuration,
+ * either one may equal the order total — when the merchant absorbs fees the
+ * gross matches; when fees are passed to the customer the net matches. So a
+ * payment is valid when EITHER figure matches the expected charge (±1¢).
+ * Comparing only against amountAfterCharges silently rejects every real
+ * payment on merchant-absorbs-fees accounts.
+ */
+export function hubtelAmountMatches(
+    expected: number,
+    data: HubtelStatusResult['data'] | null | undefined,
+    fallbackAmount?: number | null,
+): boolean {
+    const candidates = [data?.amount, data?.amountAfterCharges, fallbackAmount];
+    let sawAny = false;
+    for (const c of candidates) {
+        if (c === undefined || c === null) continue;
+        const n = Number(c);
+        if (!Number.isFinite(n)) continue;
+        sawAny = true;
+        if (Math.abs(n - expected) <= 0.01) return true;
+    }
+    // If the gateway reported no amounts at all we can't validate — treat as
+    // matching, since the status endpoint already confirmed the payment.
+    return !sawAny;
+}
+
 export function isHubtelFailure(
     status: string | null | undefined,
     responseCode?: string | null,
