@@ -61,6 +61,12 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState(defaultGateway);
   const [errors, setErrors] = useState<any>({});
 
+  // Coupon state — discount is always computed server-side via /api/coupons/validate
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; type: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
 
 
   // Check auth and cart
@@ -94,7 +100,47 @@ export default function CheckoutPage() {
   const subtotal = cartSubtotal;
   const shippingCost = 0; // Delivery options temporarily disabled
   const tax = 0; // No Tax
-  const total = subtotal + shippingCost + tax;
+  const couponDiscount = appliedCoupon?.discount || 0;
+  const total = Math.max(0, subtotal + shippingCost + tax - couponDiscount);
+
+  const validateCouponWithServer = async (code: string) => {
+    const res = await fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, subtotal })
+    });
+    return res.json();
+  };
+
+  const handleApplyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    setApplyingCoupon(true);
+    setCouponError(null);
+    try {
+      const result = await validateCouponWithServer(code);
+      if (result.success) {
+        setAppliedCoupon({
+          id: result.coupon.id,
+          code: result.coupon.code,
+          type: result.coupon.type,
+          discount: result.discount
+        });
+        setCouponCode('');
+      } else {
+        setCouponError(result.message || 'Invalid coupon code');
+      }
+    } catch {
+      setCouponError('Could not validate coupon. Please try again.');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError(null);
+  };
 
   const validateShipping = () => {
     const newErrors: any = {};
@@ -140,6 +186,23 @@ export default function CheckoutPage() {
     }
 
     try {
+      // Re-validate the coupon at order time so a stale/exhausted code
+      // can't be redeemed. Server recomputes the discount.
+      let finalDiscount = 0;
+      let finalCoupon: { id: string; code: string } | null = null;
+      if (appliedCoupon) {
+        const result = await validateCouponWithServer(appliedCoupon.code);
+        if (!result.success) {
+          alert(`Coupon ${appliedCoupon.code} is no longer valid: ${result.message || 'please remove it and try again.'}`);
+          setAppliedCoupon(null);
+          setIsLoading(false);
+          return;
+        }
+        finalDiscount = result.discount;
+        finalCoupon = { id: result.coupon.id, code: result.coupon.code };
+      }
+      const finalTotal = Math.max(0, subtotal + shippingCost + tax - finalDiscount);
+
       const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       // Generate tracking number: SLI-XXXXXX (6-char alphanumeric)
       const trackingId = Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
@@ -159,8 +222,8 @@ export default function CheckoutPage() {
           subtotal: subtotal,
           tax_total: tax,
           shipping_total: shippingCost,
-          discount_total: 0,
-          total: total,
+          discount_total: finalDiscount,
+          total: finalTotal,
           shipping_method: deliveryMethod,
           payment_method: paymentMethod,
           shipping_address: shippingData,
@@ -169,7 +232,8 @@ export default function CheckoutPage() {
             guest_checkout: !user,
             first_name: shippingData.firstName,
             last_name: shippingData.lastName,
-            tracking_number: trackingNumber
+            tracking_number: trackingNumber,
+            ...(finalCoupon ? { coupon_id: finalCoupon.id, coupon_code: finalCoupon.code, coupon_discount: finalDiscount } : {})
           }
         }])
         .select()
@@ -594,6 +658,55 @@ export default function CheckoutPage() {
                     */}
                   </div>
 
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Coupon Code</h2>
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <i className="ri-coupon-2-line text-xl text-green-700"></i>
+                          <div>
+                            <p className="font-semibold text-green-800 font-mono">{appliedCoupon.code}</p>
+                            <p className="text-sm text-green-700">
+                              {appliedCoupon.type === 'free_shipping'
+                                ? 'Free shipping applied'
+                                : `You save GH₵ ${appliedCoupon.discount.toFixed(2)}`}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleRemoveCoupon}
+                          className="text-sm font-semibold text-red-600 hover:text-red-700 cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={couponCode}
+                            onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleApplyCoupon(); }}
+                            placeholder="Enter coupon code"
+                            className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-bronze focus:border-brand-bronze font-mono uppercase"
+                            maxLength={32}
+                          />
+                          <button
+                            onClick={handleApplyCoupon}
+                            disabled={applyingCoupon || !couponCode.trim()}
+                            className="px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
+                          >
+                            {applyingCoupon ? 'Checking...' : 'Apply'}
+                          </button>
+                        </div>
+                        {couponError && (
+                          <p className="text-sm text-red-600 mt-2">{couponError}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {hubtelEnabled && (
                     <div className="mt-8 pt-6 border-t border-gray-200">
                       <h2 className="text-xl font-bold text-gray-900 mb-2">Payment Method</h2>
@@ -680,6 +793,8 @@ export default function CheckoutPage() {
               shipping={shippingCost}
               tax={tax}
               total={total}
+              discount={couponDiscount}
+              couponCode={appliedCoupon?.code}
             />
           </div>
         </div>
