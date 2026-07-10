@@ -77,7 +77,17 @@ export default function Footer() {
                 />
               </Link>
               <p className="text-brand-cream/70 leading-relaxed text-sm">
-                {[siteTagline, contactAddress || null, contactPhone ? `Tel: ${contactPhone}` : null, (contactWhatsapp && contactWhatsapp !== contactPhone) ? `WhatsApp: ${contactWhatsapp}` : null].filter(Boolean).join(' · ') || `${siteTagline}.`}
+                {siteTagline}
+                {contactAddress ? <> · {contactAddress}</> : null}
+                {contactPhone ? (
+                  <>
+                    {' · '}
+                    {/* "Tel" doubles as a discreet entrance to the admin panel */}
+                    <Link href="/admin" className="hover:text-brand-gold transition-colors">Tel</Link>
+                    {`: ${contactPhone}`}
+                  </>
+                ) : null}
+                {contactWhatsapp && contactWhatsapp !== contactPhone ? <> · {`WhatsApp: ${contactWhatsapp}`}</> : null}
               </p>
 
               {contactEmail && (
