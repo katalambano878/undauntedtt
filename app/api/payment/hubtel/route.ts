@@ -126,7 +126,15 @@ export async function POST(req: Request) {
             });
 
         const requestUrl = new URL(req.url);
-        const publicBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin).replace(/\/+$/, '');
+        // Prefer the actual serving host when it's public HTTPS: the apex
+        // domain 308-redirects to www, and Hubtel's webhook may not follow
+        // redirects on POST. The request origin is always the redirect-free
+        // host. Fall back to NEXT_PUBLIC_APP_URL for local dev (http).
+        const publicBaseUrl = (
+            requestUrl.origin.startsWith('https://')
+                ? requestUrl.origin
+                : process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin
+        ).replace(/\/+$/, '');
 
         const defaultRedirectUrl = `${publicBaseUrl}/order-success?order=${orderRef}&payment_success=true`;
         const allowedPrefixes = ['https://'];
