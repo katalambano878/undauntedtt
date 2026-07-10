@@ -60,18 +60,16 @@ export default function AdminDashboard() {
 
         if (ordersError) throw ordersError;
 
-        // Only count PAID orders for revenue & avg order value
+        // All stats count CONFIRMED (paid) orders only — unpaid checkouts
+        // live in Abandoned Carts and shouldn't inflate the numbers.
         const paidOrders = allOrdersData?.filter(o => o.payment_status === 'paid') || [];
         const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.total || 0), 0);
-        const totalOrders = allOrdersData?.length || 0;
         const paidOrderCount = paidOrders.length;
         const avgOrderValue = paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0;
 
-        // 2. Fetch Customers Count (approximation using orders unique emails if we don't have user metrics access)
-        // Since we can't query auth.users directly from client, we'll estimate active customers via orders or just keep it 0 if we can't.
-        // Actually, best to just show "Orders" or "Recent Signups" if we had a public profiles table.
-        // We'll use unique emails from orders as a proxy for "Customers"
-        const uniqueCustomers = new Set(allOrdersData?.map(o => o.email)).size;
+        // 2. Customers: unique emails among paid orders (client can't query
+        // auth.users directly, so paying customers is the best proxy).
+        const uniqueCustomers = new Set(paidOrders.map(o => o.email)).size;
 
 
         // Process Chart Data (Last 7 Days) - only count PAID orders as revenue
@@ -110,15 +108,15 @@ export default function AdminDashboard() {
           },
           {
             title: 'Orders',
-            value: totalOrders.toString(),
+            value: paidOrderCount.toString(),
             change: '+0%',
             trend: 'up',
             icon: 'ri-shopping-bag-line',
             color: 'blue'
           },
           {
-            title: 'Customers (Active)',
-            value: uniqueCustomers.toString(), // Proxy
+            title: 'Customers (Paying)',
+            value: uniqueCustomers.toString(),
             change: '+0%',
             trend: 'up',
             icon: 'ri-group-line',
