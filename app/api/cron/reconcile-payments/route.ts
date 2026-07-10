@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendOrderConfirmation } from '@/lib/notifications';
@@ -61,13 +62,30 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
     });
 }
 
+/**
+ * Accepted bearer tokens: CRON_SECRET (when configured on the host) or a
+ * SHA-256 digest of the service-role key. The digest fallback exists
+ * because this Vercel project's env doesn't expose CRON_SECRET, while the
+ * service-role key is always present — the Supabase pg_cron job derives
+ * the same digest without the raw key ever leaving the backend.
+ */
+function acceptedCronTokens(): string[] {
+    const tokens: string[] = [];
+    if (process.env.CRON_SECRET) tokens.push(process.env.CRON_SECRET);
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (serviceKey) {
+        tokens.push(createHash('sha256').update(serviceKey).digest('hex'));
+    }
+    return tokens;
+}
+
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization') || '';
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
-        return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
+    const tokens = acceptedCronTokens();
+    if (tokens.length === 0) {
+        return NextResponse.json({ error: 'Cron auth not configured' }, { status: 503 });
     }
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    if (!tokens.some((t) => authHeader === `Bearer ${t}`)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
