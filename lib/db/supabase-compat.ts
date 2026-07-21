@@ -27,6 +27,15 @@ import { getPool } from "./pool";
 import { FK_MAP, JSONB_COLUMNS, type FkEdge } from "./fk-map";
 import { createStorageClient, type StorageClient } from "./storage";
 
+/** Reverse-embed tables that have a `position` column — safe to ORDER BY on `*`. */
+const EMBED_TABLES_WITH_POSITION = new Set([
+  "product_images",
+  "review_images",
+  "navigation_items",
+  "banners",
+  "categories",
+]);
+
 type Row = Record<string, any>;
 type Op = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in";
 
@@ -670,9 +679,13 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any; count: number
         let related: Row[] = [];
         if (parentIds.length) {
           const ph = parentIds.map((_, i) => `$${i + 1}`).join(",");
-          // Prefer stable gallery order when embed selects a position column
+          // Prefer stable gallery order only when the embed table actually has
+          // a position column. Ordering every `*` reverse-embed by position
+          // breaks tables like product_variants (no position) and empties
+          // homepage/shop product fetches that embed variants.
           const orderBy =
-            embed.select.star || embed.select.columns.includes("position")
+            embed.select.columns.includes("position") ||
+            (embed.select.star && EMBED_TABLES_WITH_POSITION.has(embedTable))
               ? ` ORDER BY ${ident("position")} ASC NULLS LAST`
               : "";
           const res = await pool.query(
