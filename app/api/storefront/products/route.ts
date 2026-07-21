@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Server-side Supabase client (no auth needed for public data)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 // Simple in-memory cache
 let cache: { data: any; timestamp: number } | null = null;
@@ -30,7 +25,7 @@ export async function GET(request: Request) {
     }
 
     try {
-        let query = supabase
+        let query = supabaseAdmin
             .from('products')
             .select(`
                 id, name, slug, price, compare_at_price, quantity, description, metadata,
