@@ -38,8 +38,20 @@ export default function LazyImage({
     onLoad?.();
   };
 
+  const resolvedSrc =
+    !src || src.includes('via.placeholder.com')
+      ? '/placeholder-product.svg'
+      : src;
+
+  // Same-origin storage paths and local placeholders — skip the optimizer so
+  // relative /storage/v1/... URLs work after the Supabase → plain-PG cutover.
+  const useNativeImg =
+    resolvedSrc.startsWith('/storage/') ||
+    resolvedSrc.startsWith('/placeholder') ||
+    resolvedSrc.endsWith('.svg');
+
   // Fallback for invalid/empty URLs
-  if (!src || hasError) {
+  if (!resolvedSrc || hasError) {
     return (
       <div className={`relative overflow-hidden bg-gray-200 flex items-center justify-center ${className}`} style={{ width, height }}>
         <span className="text-gray-400 text-xs">No Image</span>
@@ -52,17 +64,28 @@ export default function LazyImage({
       {!isLoaded && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse z-10"></div>
       )}
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        sizes={sizes}
-        className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-        onLoad={handleLoad}
-        onError={handleError}
-        priority={priority}
-        quality={75}
-      />
+      {useNativeImg ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={resolvedSrc}
+          alt={alt}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      ) : (
+        <Image
+          src={resolvedSrc}
+          alt={alt}
+          fill
+          sizes={sizes}
+          className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={handleLoad}
+          onError={handleError}
+          priority={priority}
+          quality={75}
+        />
+      )}
     </div>
   );
 }

@@ -50,3 +50,7 @@ whatsapp-import/
 .vscode/settings.json
 .vscode/launch.json
 *.code-workspace
+
+migration-artifacts/dumps/
+migration-artifacts/storage/
+.env.staging

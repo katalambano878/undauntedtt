@@ -256,7 +256,7 @@ export default function CheckoutPage() {
       const productMetaMap = new Map((productsData || []).map((p: any) => [p.id, p.metadata]));
       
       for (const item of cart) {
-        let productId = item.id;
+        let productId: string | null = item.id;
         
         // If id is not a valid UUID, it might be a slug - try to resolve it
         if (!isValidUUID(productId)) {
@@ -270,11 +270,14 @@ export default function CheckoutPage() {
             productId = product.id;
             productMetaMap.set(product.id, product.metadata);
           } else {
-            throw new Error(`Product not found: ${item.name}. Please remove it from your cart and try again.`);
+            productId = null; // FK-safe: deleted/legacy cart lines
           }
+        } else if (!productMetaMap.has(productId)) {
+          // Stale UUID for deleted product — avoid order_items_product_id_fkey failure
+          productId = null;
         }
         
-        const prodMeta = productMetaMap.get(productId);
+        const prodMeta = productId ? productMetaMap.get(productId) : null;
         
         orderItems.push({
           order_id: order.id,

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export type CartItem = {
     id: string;
@@ -35,13 +36,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Load cart from localStorage on mount, with migration for legacy items
     useEffect(() => {
+        let cancelled = false;
+        (async () => {
         const savedCart = localStorage.getItem('cart');
         if (savedCart) {
             try {
                 const parsed: CartItem[] = JSON.parse(savedCart);
                 // Migrate legacy cart items: if `id` is not a UUID, it's likely a slug
                 const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-                const migratedCart = parsed.filter(item => {
+                let migratedCart = parsed.filter(item => {
                     if (!item.id || !item.name || !item.price) return false; // Remove corrupted items
                     if (!isValidUUID(item.id)) {
                         // Legacy item with slug as id - ensure slug is set, then clear
@@ -56,8 +59,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     }
                     return true;
                 });
+                const ids = migratedCart.map(i => i.id);
+                if (ids.length > 0) {
+                    const { data } = await supabase.from('products').select('id').in('id', ids);
+                    if (data) {
+                        const live = new Set(data.map((p: { id: string }) => p.id));
+                        const before = migratedCart.length;
+                        migratedCart = migratedCart.filter(i => live.has(i.id));
+                        if (migratedCart.length !== before) {
+                            console.warn(`Removed ${before - migratedCart.length} cart item(s) no longer in catalog`);
+                        }
+                    }
+                }
                 setCart(migratedCart);
-                // If items were removed, update localStorage immediately
                 if (migratedCart.length !== parsed.length) {
                     localStorage.setItem('cart', JSON.stringify(migratedCart));
                 }
@@ -66,7 +80,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 localStorage.removeItem('cart');
             }
         }
-        setIsInitialized(true);
+        if (!cancelled) setIsInitialized(true);
+        })();
+        return () => { cancelled = true; };
     }, []);
 
     // Save cart to localStorage whenever it changes
