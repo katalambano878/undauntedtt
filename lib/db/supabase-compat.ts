@@ -94,6 +94,21 @@ function uuidSafeLeft(col: string, value: any): string {
   return ident(col);
 }
 
+/** Same as uuidSafeLeft but for `alias."col"` inside EXISTS subqueries. */
+function uuidSafeQualified(alias: string, col: string, value: any): string {
+  const looksUuidCol = col === "id" || col.endsWith("_id");
+  const left = `${alias}.${ident(col)}`;
+  if (
+    looksUuidCol &&
+    typeof value === "string" &&
+    value.length > 0 &&
+    !UUID_RE.test(value)
+  ) {
+    return `${left}::text`;
+  }
+  return left;
+}
+
 // ---- select-string parser (handles nested embeds with parentheses) ---------
 function parseSelect(sel: string): ParsedSelect {
   const result: ParsedSelect = { columns: [], star: false, embeds: [] };
@@ -387,6 +402,54 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any; count: number
   }
 
   // ---- WHERE construction ---------------------------------------------------
+  /**
+   * PostgREST allows filters on embedded resources as `related.column`
+   * (e.g. `.eq('categories.slug', 'rings')` with `categories!inner(...)`).
+   * Translate those into EXISTS subqueries using the FK map.
+   */
+  private resolveNestedRelation(relTable: string): { fromSql: string; joinCond: string } {
+    if (!PG_IDENT.test(relTable)) {
+      throw new Error(`Unsafe SQL identifier: ${relTable}`);
+    }
+    const fwd = (FK_MAP[this.table] || []).find((e) => e.foreignTable === relTable);
+    if (fwd) {
+      // owning.fk -> related.foreignColumn (usually id)
+      return {
+        fromSql: `${ident(relTable)} AS __rel`,
+        joinCond: `__rel.${ident(fwd.foreignColumn)} = ${ident(this.table)}.${ident(fwd.column)}`,
+      };
+    }
+    const rev = (FK_MAP[relTable] || []).find((e) => e.foreignTable === this.table);
+    if (rev) {
+      // related.fk -> owning.foreignColumn (has-many / belongs-to reverse)
+      return {
+        fromSql: `${ident(relTable)} AS __rel`,
+        joinCond: `__rel.${ident(rev.column)} = ${ident(this.table)}.${ident(rev.foreignColumn)}`,
+      };
+    }
+    throw new Error(
+      `No FK relationship between ${this.table} and ${relTable} for nested filter`,
+    );
+  }
+
+  /** Build a predicate; if col is `table.column`, wrap it in EXISTS. */
+  private withColumn(
+    col: string,
+    valueHint: any,
+    makePred: (left: string) => string,
+  ): string {
+    if (!col.includes(".")) {
+      return makePred(uuidSafeLeft(col, valueHint));
+    }
+    const [relTable, relCol] = col.split(".");
+    if (!PG_IDENT.test(relTable) || !PG_IDENT.test(relCol) || col.split(".").length !== 2) {
+      throw new Error(`Unsafe SQL identifier: ${col}`);
+    }
+    const { fromSql, joinCond } = this.resolveNestedRelation(relTable);
+    const left = uuidSafeQualified("__rel", relCol, valueHint);
+    return `EXISTS (SELECT 1 FROM ${fromSql} WHERE ${joinCond} AND ${makePred(left)})`;
+  }
+
   private buildWhere(params: any[]): string {
     const clauses: string[] = [];
     for (const f of this.filters) {
@@ -400,7 +463,10 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any; count: number
             params.push(v);
             return `$${params.length}`;
           });
-          clauses.push(`${ident(f.col!)} IN (${ph.join(",")})`);
+          const hint = f.values[0];
+          clauses.push(
+            this.withColumn(f.col!, hint, (left) => `${left} IN (${ph.join(",")})`),
+          );
         }
       } else if (f.kind === "notIn") {
         const raw = String(f.value).replace(/^\(|\)$/g, "").trim();
@@ -410,7 +476,14 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any; count: number
           params.push(v);
           return `$${params.length}`;
         });
-        clauses.push(`(${ident(f.col!)} IS NULL OR ${ident(f.col!)} NOT IN (${ph.join(",")}))`);
+        const hint = vals[0];
+        clauses.push(
+          this.withColumn(
+            f.col!,
+            hint,
+            (left) => `(${left} IS NULL OR ${left} NOT IN (${ph.join(",")}))`,
+          ),
+        );
       } else if (f.kind === "is") {
         clauses.push(this.isClause(f.col!, f.value));
       } else if (f.kind === "notIs") {
@@ -424,10 +497,12 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any; count: number
   }
 
   private isClause(col: string, value: any): string {
-    if (value === null || value === "null") return `${ident(col)} IS NULL`;
-    if (value === true || value === "true") return `${ident(col)} IS TRUE`;
-    if (value === false || value === "false") return `${ident(col)} IS FALSE`;
-    return `${ident(col)} IS NOT DISTINCT FROM ${value}`;
+    return this.withColumn(col, value, (left) => {
+      if (value === null || value === "null") return `${left} IS NULL`;
+      if (value === true || value === "true") return `${left} IS TRUE`;
+      if (value === false || value === "false") return `${left} IS FALSE`;
+      return `${left} IS NOT DISTINCT FROM ${value}`;
+    });
   }
 
   private cmpClause(col: string, op: string, value: any, params: any[]): string {
@@ -448,8 +523,11 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any; count: number
     params.push(value);
     // Avoid Postgres uuid cast errors for filters like id.eq.ORD-123
     // (PostgREST coerces; we compare as text when the value is not a UUID).
-    const left = uuidSafeLeft(col, value);
-    const clause = `${left} ${o} $${params.length}`;
+    const clause = this.withColumn(
+      col,
+      value,
+      (left) => `${left} ${o} $${params.length}`,
+    );
     return negate ? `NOT (${clause})` : clause;
   }
 
