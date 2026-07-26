@@ -41,7 +41,7 @@ export default function ProductsPage() {
         .select(`
           *,
           categories(name),
-          product_variants(count),
+          product_variants(id),
           product_images(url, position)
         `);
 
@@ -64,7 +64,7 @@ export default function ProductsPage() {
           image: p.product_images?.find((img: any) => img.position === 0)?.url
             || p.product_images?.[0]?.url
             || 'https://via.placeholder.com/300?text=No+Image',
-          variantsCount: p.product_variants?.[0]?.count || 0,
+          variantsCount: Array.isArray(p.product_variants) ? p.product_variants.length : 0,
           stock: p.quantity,
           sales: 0, // Placeholder for now
           rating: p.rating_avg || 0

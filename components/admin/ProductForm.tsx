@@ -379,7 +379,8 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                         position: idx,
                         alt_text: productName
                     }));
-                    await supabase.from('product_images').insert(imageInserts);
+                    const { error: imgError } = await supabase.from('product_images').insert(imageInserts);
+                    if (imgError) throw imgError;
                 }
 
                 // 2. Variants

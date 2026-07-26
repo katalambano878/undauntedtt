@@ -129,17 +129,17 @@ export async function POST(request: Request) {
         // contact — public but strictly validated and rate-limited
         // ============================================================
         if (type === 'contact') {
-            const { name, email, subject, message } = payload;
-            if (!name || !email || !subject || !message) {
-                return NextResponse.json({ error: 'All contact fields required' }, { status: 400 });
+            // Prefer /api/contact — keep this path for backwards compat but
+            // apply the same spam heuristics so bots can't bypass via this route.
+            const { detectContactSpam } = await import('@/lib/spam');
+            const spamReason = detectContactSpam(payload);
+            if (spamReason) {
+                console.warn('[Notifications/contact] Rejected spam:', spamReason);
+                return NextResponse.json({ success: true, message: 'Message received' });
             }
-            // Basic email format check
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
-            }
-            // Length limits to prevent abuse
-            if (name.length > 100 || subject.length > 200 || message.length > 5000) {
-                return NextResponse.json({ error: 'Input too long' }, { status: 400 });
+            const contactRl = checkRateLimit(`contact:${clientId}`, { maxRequests: 3, windowSeconds: 600 });
+            if (!contactRl.success) {
+                return NextResponse.json({ error: 'Too many messages' }, { status: 429 });
             }
             await sendContactMessage(payload);
             return NextResponse.json({ success: true, message: 'Contact message sent' });

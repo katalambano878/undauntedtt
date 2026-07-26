@@ -90,6 +90,9 @@ export async function GET(
   return NextResponse.json(result.data ?? [], { status: 200, headers });
 }
 
+/** Tables that must not accept anonymous REST inserts (use dedicated API routes). */
+const REST_INSERT_BLOCKLIST = new Set(["contact_submissions"]);
+
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ table: string }> }
@@ -99,6 +102,9 @@ export async function POST(
   }
   const { table } = await ctx.params;
   if (!PG_IDENT.test(table)) return jsonError("Invalid table");
+  if (REST_INSERT_BLOCKLIST.has(table)) {
+    return jsonError("Use the contact form API to submit messages", 403);
+  }
 
   const body = await req.json().catch(() => null);
   if (body == null) return jsonError("Invalid JSON body");

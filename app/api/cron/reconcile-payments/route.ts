@@ -27,8 +27,8 @@ export const dynamic = 'force-dynamic';
  * this automatically; manual calls must include the header explicitly.
  */
 
-const LOOKBACK_HOURS = 24;
-const MAX_PER_RUN = 60;
+const LOOKBACK_HOURS = 14 * 24; // 14 days — covers dropped callbacks after host moves
+const MAX_PER_RUN = 80;
 const PER_REQUEST_TIMEOUT_MS = 8000;
 
 type RunCounters = {

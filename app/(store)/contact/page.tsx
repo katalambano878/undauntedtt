@@ -23,7 +23,9 @@ export default function ContactPage() {
     email: '',
     phone: '',
     subject: '',
-    message: ''
+    message: '',
+    /** Honeypot — leave empty; bots fill hidden fields */
+    website: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -50,44 +52,37 @@ export default function ContactPage() {
     setIsSubmitting(true);
     setSubmitStatus('idle');
 
-    // reCAPTCHA verification
-    const isHuman = (await getToken('contact')).ok;
-    if (!isHuman) {
-      setSubmitStatus('error');
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
-      // Store in Supabase
-      const { error } = await supabase
-        .from('contact_submissions')
-        .insert({
+      // Optional reCAPTCHA when site key is configured
+      if (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
+        const captcha = await getToken('contact');
+        if (!captcha.ok) {
+          setSubmitStatus('error');
+          return;
+        }
+      }
+
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           subject: formData.subject,
           message: formData.message,
-        });
+          website: formData.website,
+        }),
+      });
 
-      if (error) {
-        // Table might not exist, still show success
-        console.log('Note: contact_submissions table may not exist');
+      if (!res.ok) {
+        setSubmitStatus('error');
+        return;
       }
 
-      // Send Contact Notification
-      fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'contact',
-          payload: formData
-        })
-      }).catch(err => console.error('Contact notification error:', err));
-
       setSubmitStatus('success');
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
-    } catch (error) {
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '', website: '' });
+    } catch {
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
@@ -230,7 +225,20 @@ export default function ContactPage() {
               Fill out the form below and we'll get back to you as soon as possible.
             </p>
 
-            <form id="contactForm" onSubmit={handleSubmit} className="space-y-6">
+            <form id="contactForm" onSubmit={handleSubmit} className="relative space-y-6">
+              {/* Honeypot — hidden from humans, bots often fill it */}
+              <div aria-hidden="true" className="absolute -left-[9999px] opacity-0 h-0 w-0 overflow-hidden">
+                <label htmlFor="website">Website</label>
+                <input
+                  type="text"
+                  id="website"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={formData.website}
+                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                />
+              </div>
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name *
