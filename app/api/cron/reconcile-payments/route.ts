@@ -264,7 +264,11 @@ async function reconcileMoolre(args: RecArgs) {
     const { order, runId, counters, logs } = args;
     const expectedAmount = Number(order.total) || 0;
 
-    if (!process.env.MOOLRE_API_USER || !process.env.MOOLRE_API_PUBKEY) {
+    if (
+        !process.env.MOOLRE_API_USER ||
+        !process.env.MOOLRE_API_PUBKEY ||
+        !process.env.MOOLRE_ACCOUNT_NUMBER
+    ) {
         counters.skipped += 1;
         logs.push({
             run_id: runId,
@@ -276,7 +280,7 @@ async function reconcileMoolre(args: RecArgs) {
             reported_amount: null,
             gateway_status: null,
             gateway_response_code: null,
-            notes: 'MOOLRE_API_USER/MOOLRE_API_PUBKEY missing',
+            notes: 'MOOLRE credentials missing',
         });
         return;
     }
@@ -285,26 +289,14 @@ async function reconcileMoolre(args: RecArgs) {
     const externalRef: string =
         (meta.moolre_externalref as string | undefined) || order.order_number;
 
-    const response = await withTimeout(
-        fetch('https://api.moolre.com/embed/status', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-USER': process.env.MOOLRE_API_USER!,
-                'X-API-PUBKEY': process.env.MOOLRE_API_PUBKEY!,
-            },
-            body: JSON.stringify({ externalref: externalRef }),
-        }),
+    const { checkMoolreStatus } = await import('@/lib/moolre');
+    const status = await withTimeout(
+        checkMoolreStatus(externalRef),
         PER_REQUEST_TIMEOUT_MS,
-        'moolre embed/status',
+        'moolre open/transact/status',
     );
-    const result: any = await response.json();
-    const sStatus = String(result?.data?.status || '').toLowerCase();
-    const verified =
-        result?.status === 1 &&
-        ['success', 'successful', 'completed', 'paid'].includes(sStatus);
 
-    if (!verified) {
+    if (!status.verified) {
         counters.still_pending += 1;
         logs.push({
             run_id: runId,
@@ -313,16 +305,15 @@ async function reconcileMoolre(args: RecArgs) {
             gateway: 'moolre',
             action: 'still_pending',
             expected_amount: expectedAmount,
-            reported_amount: result?.data?.amount != null ? Number(result.data.amount) : null,
-            gateway_status: sStatus || null,
-            gateway_response_code: result?.code != null ? String(result.code) : null,
+            reported_amount: status.amount,
+            gateway_status: status.rawStatus,
+            gateway_response_code: status.responseCode,
             notes: null,
         });
         return;
     }
 
-    const reported = result?.data?.amount != null ? parseFloat(String(result.data.amount)) : null;
-    if (reported !== null && Math.abs(reported - expectedAmount) > 0.01) {
+    if (status.amount !== null && Math.abs(status.amount - expectedAmount) > 0.01) {
         counters.amount_mismatch += 1;
         logs.push({
             run_id: runId,
@@ -331,9 +322,9 @@ async function reconcileMoolre(args: RecArgs) {
             gateway: 'moolre',
             action: 'amount_mismatch',
             expected_amount: expectedAmount,
-            reported_amount: reported,
-            gateway_status: sStatus || null,
-            gateway_response_code: result?.code != null ? String(result.code) : null,
+            reported_amount: status.amount,
+            gateway_status: status.rawStatus,
+            gateway_response_code: status.responseCode,
             notes: 'gateway confirmed paid but amount outside ±1¢',
         });
         return;
@@ -342,10 +333,10 @@ async function reconcileMoolre(args: RecArgs) {
     await settleOrder({
         order,
         gateway: 'moolre',
-        externalRef: result?.data?.reference || 'reconciler-moolre',
-        reported,
-        gatewayStatus: sStatus || null,
-        gatewayResponseCode: result?.code != null ? String(result.code) : null,
+        externalRef: status.transactionId || 'reconciler-moolre',
+        reported: status.amount,
+        gatewayStatus: status.rawStatus,
+        gatewayResponseCode: status.responseCode,
         runId,
         counters,
         logs,
