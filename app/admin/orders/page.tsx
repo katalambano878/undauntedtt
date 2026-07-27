@@ -42,7 +42,7 @@ export default function AdminOrdersPage() {
   const [sortBy, setSortBy] = useState('date');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [orderViewTab, setOrderViewTab] = useState<'confirmed' | 'abandoned'>('confirmed');
+  const [orderViewTab, setOrderViewTab] = useState<'all' | 'confirmed' | 'abandoned'>('all');
   const [sendingPaymentLink, setSendingPaymentLink] = useState<string | null>(null);
   const [orderStats, setOrderStats] = useState<OrderStats[]>([
     { label: 'All Orders', count: 0, status: 'all' },
@@ -311,9 +311,14 @@ export default function AdminOrdersPage() {
     const customerEmail = getCustomerEmail(order).toLowerCase();
     const orderId = (order.order_number || order.id).toLowerCase();
 
-    // First filter by view tab (confirmed vs abandoned)
+    // Filter by view tab (all / paid / unpaid)
     const isConfirmed = order.payment_status === 'paid';
-    const matchesViewTab = orderViewTab === 'confirmed' ? isConfirmed : !isConfirmed;
+    const matchesViewTab =
+      orderViewTab === 'all'
+        ? true
+        : orderViewTab === 'confirmed'
+          ? isConfirmed
+          : !isConfirmed;
 
     const matchesSearch = orderId.includes(searchQuery.toLowerCase()) ||
       customerName.includes(searchQuery.toLowerCase()) ||
@@ -349,8 +354,19 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* View Tabs: Confirmed Orders vs Abandoned Carts */}
+      {/* View Tabs: All / Confirmed / Abandoned */}
       <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => { setOrderViewTab('all'); setStatusFilter('all'); }}
+          className={`px-6 py-3 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
+            orderViewTab === 'all'
+              ? 'border-blue-700 text-blue-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <i className="ri-list-check-2 mr-2"></i>
+          All Orders ({orders.length})
+        </button>
         <button
           onClick={() => { setOrderViewTab('confirmed'); setStatusFilter('all'); }}
           className={`px-6 py-3 font-semibold text-sm border-b-2 transition-colors cursor-pointer ${
@@ -360,7 +376,7 @@ export default function AdminOrdersPage() {
           }`}
         >
           <i className="ri-check-double-line mr-2"></i>
-          Confirmed Orders ({confirmedCount})
+          Confirmed ({confirmedCount})
         </button>
         <button
           onClick={() => { setOrderViewTab('abandoned'); setStatusFilter('all'); }}
@@ -371,11 +387,11 @@ export default function AdminOrdersPage() {
           }`}
         >
           <i className="ri-shopping-cart-2-line mr-2"></i>
-          Abandoned Carts ({abandonedCount})
+          Abandoned ({abandonedCount})
         </button>
       </div>
 
-      {orderViewTab === 'confirmed' && (
+      {(orderViewTab === 'confirmed' || orderViewTab === 'all') && (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {orderStats.map((stat) => (
           <button
@@ -583,7 +599,9 @@ export default function AdminOrdersPage() {
                     <td className="py-4 px-4 text-sm whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-gray-700">{order.payment_method || 'N/A'}</span>
-                        {orderViewTab === 'abandoned' && (
+                        {order.payment_status === 'paid' ? (
+                          <span className="text-xs mt-1 text-green-600">Paid</span>
+                        ) : (
                           <span className={`text-xs mt-1 ${order.payment_status === 'failed' ? 'text-red-600' : 'text-amber-600'}`}>
                             {order.payment_status === 'failed' ? 'Failed' : 'Pending'}
                           </span>
@@ -604,7 +622,7 @@ export default function AdminOrdersPage() {
                         >
                           <i className="ri-eye-line text-lg w-4 h-4 flex items-center justify-center"></i>
                         </Link>
-                        {orderViewTab === 'abandoned' && order.payment_status !== 'paid' && (
+                        {order.payment_status !== 'paid' && (
                           <button
                             onClick={() => handleResendPaymentLink(order)}
                             disabled={sendingPaymentLink === order.id}

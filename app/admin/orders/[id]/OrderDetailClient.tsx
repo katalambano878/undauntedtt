@@ -44,13 +44,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     };
   }, []);
 
-  const fetchOrderDetails = useCallback(async () => {
-    try {
-      setLoading(true);
-      // Try to fetch by ID or order_number
-      let query = supabase
-        .from('orders')
-        .select(`
+  const orderDetailSelect = `
           *,
           order_items (
             id,
@@ -66,40 +60,48 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               product_images (url)
             )
           )
-        `)
-        .eq('id', orderId);
+        `;
 
-      let { data, error } = await query.single();
+  // Fallback without nested product images — line items still have product_name.
+  const orderDetailSelectFallback = `
+          *,
+          order_items (
+            id,
+            product_id,
+            product_name,
+            variant_name,
+            sku,
+            quantity,
+            unit_price,
+            total_price,
+            metadata
+          )
+        `;
+
+  const fetchOrderDetails = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const fetchBy = async (column: 'id' | 'order_number', select: string) =>
+        supabase.from('orders').select(select).eq(column, orderId).single();
+
+      let { data, error } = await fetchBy('id', orderDetailSelect);
 
       if (error && error.code === 'PGRST116') {
-        // Not found by ID, try order_number
-        const { data: dataByNum, error: errorByNum } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              id,
-              product_id,
-              product_name,
-              variant_name,
-              sku,
-              quantity,
-              unit_price,
-              total_price,
-              metadata,
-              products (
-                product_images (url)
-              )
-            )
-          `)
-          .eq('order_number', orderId)
-          .single();
+        ({ data, error } = await fetchBy('order_number', orderDetailSelect));
+      }
 
-        if (dataByNum) {
-          data = dataByNum;
+      // Nested products(product_images) can fail on some compat builds —
+      // retry without images so the order is still usable.
+      if (error && error.code !== 'PGRST116') {
+        let fallback = await fetchBy('id', orderDetailSelectFallback);
+        if (fallback.error && fallback.error.code === 'PGRST116') {
+          fallback = await fetchBy('order_number', orderDetailSelectFallback);
+        }
+        if (!fallback.error && fallback.data) {
+          data = fallback.data;
           error = null;
-        } else {
-          error = errorByNum;
         }
       }
 
@@ -110,7 +112,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
     } catch (err: any) {
       console.error('Error fetching order:', err);
-      setError('Failed to load order details');
+      setError(err?.message ? `Failed to load order details: ${err.message}` : 'Failed to load order details');
     } finally {
       setLoading(false);
     }
