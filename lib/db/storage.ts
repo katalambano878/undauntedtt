@@ -53,8 +53,15 @@ function safeJoin(bucket: string, objectPath: string): string {
   const clean = objectPath.replace(/^\/+/, "");
   const full = path.normalize(path.join(STORAGE_ROOT, bucket, clean));
   const base = path.normalize(path.join(STORAGE_ROOT, bucket));
-  if (!full.startsWith(base)) throw new Error("Path traversal blocked");
+  if (!full.startsWith(base + path.sep) && full !== base) {
+    throw new Error("Path traversal blocked");
+  }
   return full;
+}
+
+/** Absolute filesystem path for a storage object (or cache key under a bucket). */
+export function resolveObjectPath(bucket: string, objectPath: string): string {
+  return safeJoin(bucket, objectPath);
 }
 
 export async function readObject(
@@ -77,7 +84,7 @@ export async function readObject(
   }
 }
 
-function guessContentType(p: string): string {
+export function guessContentType(p: string): string {
   const ext = p.toLowerCase().split(".").pop() || "";
   const map: Record<string, string> = {
     jpg: "image/jpeg",

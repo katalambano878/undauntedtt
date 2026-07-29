@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { storageImageUrl } from '@/lib/storage-image';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery } from '@/lib/query-cache';
@@ -298,13 +299,14 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               <div>
                 <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4 shadow-lg border border-gray-100">
                   <Image
-                    src={product.images[selectedImage]}
+                    src={storageImageUrl(product.images[selectedImage], { width: 900, quality: 78 })}
                     alt={product.name}
                     fill
                     className="object-cover object-center"
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     priority
                     quality={80}
+                    unoptimized
                   />
                   {discount > 0 && (
                     <span className="absolute top-6 right-6 bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
@@ -323,12 +325,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                           }`}
                       >
                         <Image
-                          src={image}
+                          src={storageImageUrl(image, { width: 200, quality: 65 })}
                           alt={`${product.name} view ${index + 1}`}
                           fill
                           className="object-cover object-center"
                           sizes="(max-width: 1024px) 25vw, 12vw"
                           quality={60}
+                          unoptimized
                         />
                       </button>
                     ))}

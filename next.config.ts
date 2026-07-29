@@ -100,6 +100,13 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
         ]
       },
+      // Cache public storage objects (product images) for 1 year
+      {
+        source: '/storage/v1/object/public/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
       // Cache static images in public (hero, logos, etc.) for 1 year when served directly
       {
         source: '/:path*.jpeg',

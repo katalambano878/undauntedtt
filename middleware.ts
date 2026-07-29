@@ -63,6 +63,13 @@ async function verifyPlainPgAdmin(token: string): Promise<{ ok: boolean; userId?
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Public product images: skip middleware so Cache-Control from the route
+  // handler is preserved and we avoid per-image auth overhead.
+  if (pathname.startsWith('/storage/v1/object/public/')) {
+    return NextResponse.next();
+  }
+
   const response = NextResponse.next();
 
   response.headers.set('X-Content-Type-Options', 'nosniff');

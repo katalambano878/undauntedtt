@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { isStorageImageUrl, storageImageUrl } from '@/lib/storage-image';
 
 interface LazyImageProps {
   src: string;
@@ -12,6 +13,9 @@ interface LazyImageProps {
   priority?: boolean;
   onLoad?: () => void;
   sizes?: string;
+  /** Max pixel width to request from storage resizer (card ≈ 480, PDP ≈ 900). */
+  imageWidth?: number;
+  quality?: number;
 }
 
 export default function LazyImage({
@@ -22,7 +26,9 @@ export default function LazyImage({
   height,
   priority = false,
   onLoad,
-  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw',
+  imageWidth = 480,
+  quality = 70,
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -38,19 +44,18 @@ export default function LazyImage({
     onLoad?.();
   };
 
-  const resolvedSrc =
+  const baseSrc =
     !src || src.includes('via.placeholder.com')
       ? '/placeholder-product.svg'
       : src;
 
-  // Same-origin storage paths and local placeholders — skip the optimizer so
-  // relative /storage/v1/... URLs work after the Supabase → plain-PG cutover.
-  const useNativeImg =
-    resolvedSrc.startsWith('/storage/') ||
-    resolvedSrc.startsWith('/placeholder') ||
-    resolvedSrc.endsWith('.svg');
+  const resolvedSrc = storageImageUrl(baseSrc, {
+    width: imageWidth,
+    quality,
+  });
 
-  // Fallback for invalid/empty URLs
+  const useNativeImg = isStorageImageUrl(baseSrc);
+
   if (!resolvedSrc || hasError) {
     return (
       <div className={`relative overflow-hidden bg-gray-200 flex items-center justify-center ${className}`} style={{ width, height }}>
@@ -72,7 +77,7 @@ export default function LazyImage({
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
           fetchPriority={priority ? 'high' : 'auto'}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={handleLoad}
           onError={handleError}
         />
@@ -82,7 +87,7 @@ export default function LazyImage({
           alt={alt}
           fill
           sizes={sizes}
-          className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          className={`object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
           onLoad={handleLoad}
           onError={handleError}
           priority={priority}

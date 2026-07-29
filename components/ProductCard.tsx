@@ -91,6 +91,8 @@ export default function ProductCard({
           src={image}
           alt={name}
           priority={priority}
+          imageWidth={480}
+          quality={70}
           className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
         />
 
