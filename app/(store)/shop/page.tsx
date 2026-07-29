@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
@@ -12,6 +12,8 @@ import { useInfiniteShopProducts } from '@/hooks/useInfiniteShopProducts';
 function ShopContent() {
   usePageTitle('Shop All Products');
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [categories, setCategories] = useState<any[]>([{ id: 'all', name: 'All Products', count: 0 }]);
 
@@ -23,6 +25,18 @@ function ShopContent() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const selectCategory = useCallback(
+    (slug: string) => {
+      setSelectedCategory(slug);
+      const params = new URLSearchParams(searchParams.toString());
+      if (slug === 'all') params.delete('category');
+      else params.set('category', slug);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams]
+  );
 
   // Initialize from URL params
   useEffect(() => {
@@ -182,7 +196,7 @@ function ShopContent() {
                       <div className="max-h-[min(52vh,420px)] overflow-y-auto overscroll-y-contain pr-1 space-y-1 border border-brand-taupe/25 rounded-xl p-2 bg-brand-cream/50">
                         <button
                           onClick={() => {
-                            setSelectedCategory('all');
+                            selectCategory('all');
                             resetToFirstPage();
                             setIsFilterOpen(false);
                           }}
@@ -216,7 +230,7 @@ function ShopContent() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setSelectedCategory(parent.slug);
+                                    selectCategory(parent.slug);
                                     resetToFirstPage();
                                     if (hasChildren) {
                                       setExpandedParents((prev) => new Set(prev).add(parent.id));
@@ -249,7 +263,7 @@ function ShopContent() {
                                       key={child.id}
                                       type="button"
                                       onClick={() => {
-                                        setSelectedCategory(child.slug);
+                                        selectCategory(child.slug);
                                         resetToFirstPage();
                                         setIsFilterOpen(false);
                                       }}
@@ -292,39 +306,8 @@ function ShopContent() {
                       </div>
                     </div>
 
-                    {/* Rating */}
-                    <div className="border-t border-brand-taupe/40 pt-8">
-                      <h3 className="font-semibold text-brand-ink mb-4">Rating</h3>
-                      <div className="space-y-2">
-                        {[4, 3, 2, 1].map(rating => (
-                          <button
-                            key={rating}
-                            onClick={() => {
-                              setSelectedRating(rating === selectedRating ? 0 : rating);
-                              resetToFirstPage();
-                            }}
-                            className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedRating === rating
-                              ? 'bg-brand-caramel/20 text-brand-bronze'
-                              : 'text-brand-ink/80 hover:bg-brand-cream'
-                              }`}
-                          >
-                            <div className="flex items-center space-x-2">
-                              {[1, 2, 3, 4, 5].map(star => (
-                                <i
-                                  key={star}
-                                  className={`${star <= rating ? 'ri-star-fill text-brand-gold' : 'ri-star-line text-brand-taupe'} text-sm`}
-                                ></i>
-                              ))}
-                              <span className="text-sm">& Up</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
                     <button
                       onClick={() => {
-                        // Re-fetch handled by effect dependencies
                         setIsFilterOpen(false);
                       }}
                       className="w-full bg-brand-bronze hover:bg-brand-caramel text-brand-cream py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
@@ -403,7 +386,7 @@ function ShopContent() {
                       <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
                         <button
                           onClick={() => {
-                            setSelectedCategory('all');
+                            selectCategory('all');
                             setPriceRange([0, 5000]);
                             setSelectedRating(0);
                             resetToFirstPage();

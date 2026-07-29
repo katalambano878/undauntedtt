@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery, invalidateCachePrefix } from '@/lib/query-cache';
 import { getColorHex, type ColorVariant } from '@/components/ProductCard';
@@ -30,6 +30,20 @@ type CategoryRow = {
   parent_id?: string | null;
   name?: string;
 };
+
+/** Parent categories hold 0 products — items live on children. Include self + direct children. */
+export function resolveCategoryIds(
+  selectedSlug: string,
+  categories: CategoryRow[]
+): string[] | null {
+  if (!selectedSlug || selectedSlug === 'all') return null;
+  const match = categories.find((c) => c.slug === selectedSlug);
+  if (!match) return [];
+  const childIds = categories
+    .filter((c) => c.parent_id === match.id)
+    .map((c) => c.id);
+  return [match.id, ...childIds];
+}
 
 type UseInfiniteShopProductsArgs = {
   selectedCategory: string;
@@ -112,10 +126,24 @@ export function useInfiniteShopProducts({
 
   const fetchSeq = useRef(0);
   const loadingMoreLock = useRef(false);
-  const categoriesReady = categories.length > 1 || selectedCategory === 'all';
+  // Need the real category tree (not the placeholder) before filtering by category.
+  const categoryTreeReady = categories.some((c) => c.id !== 'all' && c.slug);
+  const categoriesReady = selectedCategory === 'all' || categoryTreeReady;
+
+  const categoryIds = useMemo(
+    () => (categoriesReady ? resolveCategoryIds(selectedCategory, categories) : null),
+    [categoriesReady, selectedCategory, categories]
+  );
+  // Include resolved IDs in the key so parent→children expansion isn't cache-poisoned.
+  const categoryKey =
+    selectedCategory === 'all'
+      ? 'all'
+      : categoryIds && categoryIds.length
+        ? `ids:${[...categoryIds].sort().join(',')}`
+        : `slug:${selectedCategory}`;
 
   // Reset to page 1 whenever filters change (not when page increments).
-  const filterKey = `${selectedCategory}|${search || ''}|${priceRange.join('-')}|${selectedRating}|${sortBy}`;
+  const filterKey = `${categoryKey}|${search || ''}|${priceRange.join('-')}|${selectedRating}|${sortBy}`;
   const prevFilterKey = useRef(filterKey);
   useEffect(() => {
     if (prevFilterKey.current !== filterKey) {
@@ -128,7 +156,15 @@ export function useInfiniteShopProducts({
   }, [filterKey]);
 
   useEffect(() => {
-    if (!categoriesReady && selectedCategory !== 'all') return;
+    if (!categoriesReady) return;
+    // Unknown category slug with an empty ID list → show empty, don't fall back to all.
+    if (selectedCategory !== 'all' && categoryIds && categoryIds.length === 0) {
+      setProducts([]);
+      setTotalProducts(0);
+      setLoading(false);
+      setLoadingMore(false);
+      return;
+    }
 
     const seq = ++fetchSeq.current;
     const isFirstPage = page === 1;
@@ -139,7 +175,7 @@ export function useInfiniteShopProducts({
       setFetchError(null);
 
       try {
-        const cacheKey = `shop:v2:${filterKey}:${page}:${pageSize}`;
+        const cacheKey = `shop:v3:${filterKey}:${page}:${pageSize}`;
 
         const { data, count, error } = await cachedQuery<{
           data: any;
@@ -148,18 +184,13 @@ export function useInfiniteShopProducts({
         }>(
           cacheKey,
           async () => {
-            const isCategoryFiltered = selectedCategory !== 'all';
-            const categoryJoin = isCategoryFiltered
-              ? 'categories!inner(name, slug)'
-              : 'categories(name, slug)';
-
             // Lean select — only fields the card needs (fast embeds).
             let query = supabase
               .from('products')
               .select(
                 `
-                id, slug, name, price, compare_at_price, quantity, moq, rating_avg, status,
-                ${categoryJoin},
+                id, slug, name, price, compare_at_price, quantity, moq, rating_avg, status, category_id,
+                categories(name, slug),
                 product_images(url, position),
                 product_variants(id, price, quantity, option2)
               `,
@@ -171,29 +202,18 @@ export function useInfiniteShopProducts({
               query = query.ilike('name', `%${search}%`);
             }
 
-            if (isCategoryFiltered) {
-              const categoryObj = categories.find((c) => c.slug === selectedCategory);
-              if (categoryObj) {
-                const isParent = categories.some((c) => c.parent_id === categoryObj.id);
-                const targetSlugs = [selectedCategory];
-                if (isParent) {
-                  targetSlugs.push(
-                    ...categories
-                      .filter((c) => c.parent_id === categoryObj.id)
-                      .map((c) => c.slug!)
-                      .filter(Boolean)
-                  );
-                }
-                query = query.in('categories.slug', targetSlugs);
-              } else {
-                query = query.eq('categories.slug', selectedCategory);
-              }
+            // Filter by category_id (self + children for parents). Avoid nested
+            // categories.slug filters that miss parent collections (0 direct products).
+            if (categoryIds && categoryIds.length > 0) {
+              query = query.in('category_id', categoryIds);
             }
 
             if (priceRange[1] < 5000) {
               query = query.gte('price', priceRange[0]).lte('price', priceRange[1]);
             }
 
+            // All catalog ratings are currently 0 — applying gte would empty the grid.
+            // Only filter when the product actually meets the threshold.
             if (selectedRating > 0) {
               query = query.gte('rating_avg', selectedRating);
             }
@@ -263,11 +283,11 @@ export function useInfiniteShopProducts({
     filterKey,
     categoriesReady,
     selectedCategory,
+    categoryIds,
     search,
     priceRange,
     selectedRating,
     sortBy,
-    categories,
     refreshTick,
   ]);
 
