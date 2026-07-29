@@ -270,13 +270,19 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
             setUploading(true);
             const file = e.target.files[0];
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            if (!file.type.startsWith('image/')) {
+                alert('Please choose an image file.');
+                return;
+            }
+            const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+            const filePath = `uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('products')
-                .upload(filePath, file);
+                .upload(filePath, file, {
+                    contentType: file.type || `image/${fileExt}`,
+                    upsert: true,
+                });
 
             if (uploadError) throw uploadError;
 
@@ -284,12 +290,16 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 .from('products')
                 .getPublicUrl(filePath);
 
-            setImages([...images, { url: publicUrl, position: images.length }]);
+            const relativeUrl = publicUrl.replace(/^https?:\/\/[^/]+/i, '')
+                || `/storage/v1/object/public/products/${filePath}`;
+
+            setImages([...images, { url: relativeUrl, position: images.length }]);
 
         } catch (error: any) {
             alert('Error uploading image: ' + error.message);
         } finally {
             setUploading(false);
+            e.target.value = '';
         }
     };
 

@@ -97,14 +97,24 @@ export default function AdminCategoriesPage() {
 
       setUploading(true);
       const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `cat-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      if (!file.type.startsWith('image/')) {
+        alert('Please choose an image file (JPG, PNG, WebP, or GIF).');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be 5MB or smaller.');
+        return;
+      }
 
-      // Upload to 'products' bucket for simplicity, or create a 'categories' bucket
+      const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const filePath = `categories/cat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+
       const { error: uploadError } = await supabase.storage
         .from('products')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          contentType: file.type || `image/${fileExt}`,
+          upsert: true,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -112,12 +122,20 @@ export default function AdminCategoriesPage() {
         .from('products')
         .getPublicUrl(filePath);
 
-      setFormData({ ...formData, image_url: publicUrl });
+      // Always store host-relative paths so previews and the storefront work
+      // after the plain-Postgres / same-origin storage cutover.
+      const relativeUrl = publicUrl.replace(/^https?:\/\/[^/]+/i, '')
+        || `/storage/v1/object/public/products/${filePath}`;
+
+      setFormData((prev) => ({ ...prev, image_url: relativeUrl }));
 
     } catch (error: any) {
-      alert('Error uploading image: ' + error.message);
+      console.error('Category image upload failed:', error);
+      alert('Error uploading image: ' + (error?.message || 'Please try again.'));
     } finally {
       setUploading(false);
+      // Allow re-selecting the same file
+      e.target.value = '';
     }
   };
 
