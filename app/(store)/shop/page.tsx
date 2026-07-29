@@ -280,7 +280,7 @@ function ShopContent() {
                           step="50"
                           value={priceRange[1]}
                           onChange={(e) => {
-                            setPriceRange([0, parseInt(e.target.value)]);
+                            setPriceRange([0, parseInt(e.target.value)] as [number, number]);
                             resetToFirstPage();
                           }}
                           className="w-full h-2 bg-brand-taupe/40 rounded-lg appearance-none cursor-pointer accent-brand-bronze"
