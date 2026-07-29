@@ -54,6 +54,8 @@ interface ProductCardProps {
   hasVariants?: boolean;
   minVariantPrice?: number;
   colorVariants?: ColorVariant[];
+  /** Eager-load image for above-the-fold cards */
+  priority?: boolean;
 }
 
 export default function ProductCard({
@@ -71,7 +73,8 @@ export default function ProductCard({
   moq = 1,
   hasVariants = false,
   minVariantPrice,
-  colorVariants = []
+  colorVariants = [],
+  priority = false,
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const [activeColor, setActiveColor] = useState<string | null>(null);
@@ -87,6 +90,7 @@ export default function ProductCard({
         <LazyImage
           src={image}
           alt={name}
+          priority={priority}
           className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
         />
 

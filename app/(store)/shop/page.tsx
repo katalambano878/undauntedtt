@@ -1,49 +1,37 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import ProductCard, { type ColorVariant } from '@/components/ProductCard';
+import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
-import { getColorHex } from '@/components/ProductCard';
-import { supabase } from '@/lib/supabase';
-import { cachedQuery, invalidateCachePrefix } from '@/lib/query-cache';
 import PageHero from '@/components/PageHero';
 import { sortParentCategories } from '@/lib/category-order';
+import { useInfiniteShopProducts } from '@/hooks/useInfiniteShopProducts';
 
 function ShopContent() {
   usePageTitle('Shop All Products');
   const searchParams = useSearchParams();
 
-  // State
-  const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([{ id: 'all', name: 'All Products', count: 0 }]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [refreshTick, setRefreshTick] = useState(0);
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 5000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState('popular');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
-  const [page, setPage] = useState(1);
-  const productsPerPage = 12;
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize from URL params
   useEffect(() => {
     const category = searchParams.get('category');
     const sort = searchParams.get('sort');
-    const search = searchParams.get('search');
 
     if (category) setSelectedCategory(category);
+    else setSelectedCategory('all');
     if (sort) setSortBy(sort);
-    // Search is handled in the fetch function via searchParams directly or we could add a state for it
   }, [searchParams]);
 
   // Keep the active category's parent expanded in the sidebar
@@ -86,196 +74,27 @@ function ShopContent() {
     fetchCategories();
   }, []);
 
-  // Fetch Products
-  useEffect(() => {
-    async function fetchProducts() {
-      const isFirstPage = page === 1;
-      if (isFirstPage) {
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
-      }
-      setFetchError(null);
-      try {
-        const search = searchParams.get('search');
+  const {
+    products,
+    totalProducts,
+    loading,
+    loadingMore,
+    hasMore,
+    fetchError,
+    loadMore,
+    retry: handleRetry,
+    resetToFirstPage,
+  } = useInfiniteShopProducts({
+    selectedCategory,
+    priceRange,
+    selectedRating,
+    sortBy,
+    search: searchParams.get('search'),
+    categories,
+    pageSize: 24,
+  });
 
-        // Build cache key from all filter params
-        const cacheKey = `shop:${selectedCategory}:${search || ''}:${priceRange.join('-')}:${selectedRating}:${sortBy}:${page}`;
-
-        const { data, count, error } = await cachedQuery<{ data: any; count: any; error: any }>(
-          cacheKey,
-          async () => {
-            const isCategoryFiltered = selectedCategory !== 'all';
-            // Use an INNER join when filtering by category so the category filter
-            // actually restricts the products (a left join leaves non-matching
-            // products in the result with a null category). For "All Products"
-            // keep the left join so uncategorised products still appear.
-            const categoryJoin = isCategoryFiltered
-              ? 'categories!inner(name, slug)'
-              : 'categories(name, slug)';
-
-            let query = supabase
-              .from('products')
-              .select(`
-                *,
-                ${categoryJoin},
-                product_images(url, position),
-                product_variants(id, name, price, quantity, option1, option2, image_url)
-              `, { count: 'exact' })
-              .eq('status', 'active');
-
-            // Search
-            if (search) {
-              query = query.ilike('name', `%${search}%`);
-            }
-
-            // Category Filter with Subcategories
-            if (isCategoryFiltered) {
-              const categoryObj = categories.find(c => c.slug === selectedCategory);
-
-              if (categoryObj) {
-                // Only fold in child subcategories when a PARENT category is selected.
-                // When a subcategory is selected, restrict strictly to it.
-                const isParent = categories.some(c => c.parent_id === categoryObj.id);
-                const targetSlugs = [selectedCategory];
-                if (isParent) {
-                  const childSlugs = categories
-                    .filter(c => c.parent_id === categoryObj.id)
-                    .map(c => c.slug);
-                  targetSlugs.push(...childSlugs);
-                }
-                query = query.in('categories.slug', targetSlugs);
-              } else {
-                query = query.eq('categories.slug', selectedCategory);
-              }
-            }
-
-            // Price Filter
-            if (priceRange[1] < 5000) {
-              query = query.gte('price', priceRange[0]).lte('price', priceRange[1]);
-            }
-
-            // Rating Filter
-            if (selectedRating > 0) {
-              query = query.gte('rating_avg', selectedRating);
-            }
-
-            // Sorting
-            switch (sortBy) {
-              case 'price-low':
-                query = query.order('price', { ascending: true });
-                break;
-              case 'price-high':
-                query = query.order('price', { ascending: false });
-                break;
-              case 'rating':
-                query = query.order('rating_avg', { ascending: false });
-                break;
-              case 'new':
-                query = query.order('created_at', { ascending: false });
-                break;
-              case 'popular':
-              default:
-                query = query.order('created_at', { ascending: false });
-                break;
-            }
-
-            // Pagination
-            const from = (page - 1) * productsPerPage;
-            const to = from + productsPerPage - 1;
-            query = query.range(from, to);
-
-            const result = await query;
-            return result;
-          },
-          2 * 60 * 1000 // Cache for 2 minutes
-        );
-
-        if (error) {
-          console.error('[Shop] Supabase error:', error.message, error.code, error.details, error.hint);
-          throw error;
-        }
-
-        if (data && Array.isArray(data)) {
-          const formattedProducts = data.map((p: any) => {
-            const imgs = (p.product_images || []).slice().sort((a: { position?: number }, b: { position?: number }) => (a.position ?? 0) - (b.position ?? 0));
-            const variants = p.product_variants || [];
-            const hasVariants = variants.length > 0;
-            const minVariantPrice = hasVariants ? Math.min(...variants.map((v: any) => v.price || p.price)) : undefined;
-            const totalVariantStock = hasVariants ? variants.reduce((sum: number, v: any) => sum + (v.quantity || 0), 0) : 0;
-            const effectiveStock = hasVariants ? totalVariantStock : p.quantity;
-            // Extract unique colors from option2
-            const colorVariants: ColorVariant[] = [];
-            const seenColors = new Set<string>();
-            for (const v of variants) {
-              const colorName = v.option2;
-              if (colorName && !seenColors.has(colorName.toLowerCase().trim())) {
-                const hex = getColorHex(colorName);
-                if (hex) {
-                  seenColors.add(colorName.toLowerCase().trim());
-                  colorVariants.push({ name: colorName.trim(), hex });
-                }
-              }
-            }
-
-            return {
-              id: p.id,           // Product UUID for cart/orders
-              slug: p.slug,       // Slug for navigation
-              name: p.name,
-              price: p.price,
-              originalPrice: p.compare_at_price,
-              image: imgs[0]?.url || '',
-              rating: p.rating_avg || 0,
-              reviewCount: 0, // Need to implement reviews relation
-              badge: p.compare_at_price > p.price ? 'Sale' : undefined, // Simple badge logic
-              inStock: effectiveStock > 0,
-              maxStock: effectiveStock || 50,
-              moq: p.moq || 1,
-              category: p.categories?.name,
-              hasVariants,
-              minVariantPrice,
-              colorVariants
-            };
-          });
-          setProducts((prev) => {
-            if (isFirstPage) return formattedProducts;
-            // De-dupe in case of overlapping ranges
-            const seen = new Set(prev.map((x) => x.id));
-            return [...prev, ...formattedProducts.filter((x) => !seen.has(x.id))];
-          });
-          setTotalProducts(count || 0);
-        }
-      } catch (err: unknown) {
-        const e = err as { message?: string; code?: string; details?: string };
-        const msg = e?.message || (err instanceof Error ? err.message : 'Unable to load products');
-        console.error('Error fetching products:', msg, e?.code || '', e?.details || '');
-        setFetchError(msg);
-        if (isFirstPage) {
-          setProducts([]);
-          setTotalProducts(0);
-        }
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
-    }
-
-    fetchProducts();
-  }, [selectedCategory, priceRange, selectedRating, sortBy, page, searchParams, categories, refreshTick]);
-
-  const handleRetry = () => {
-    invalidateCachePrefix('shop:');
-    setPage(1);
-    setRefreshTick((t) => t + 1);
-  };
-
-  const hasMore = products.length < totalProducts;
-
-  const loadMore = useCallback(() => {
-    setPage((p) => p + 1);
-  }, []);
-
-  // Infinite scroll: load the next page when the sentinel enters the viewport
+  // Infinite scroll — prefetch ~1 viewport ahead for smoothness
   useEffect(() => {
     if (loading || loadingMore || !hasMore) return;
     const node = sentinelRef.current;
@@ -283,11 +102,9 @@ function ShopContent() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          loadMore();
-        }
+        if (entries[0]?.isIntersecting) loadMore();
       },
-      { rootMargin: '600px 0px' }
+      { root: null, rootMargin: '900px 0px', threshold: 0 }
     );
 
     observer.observe(node);
@@ -366,7 +183,7 @@ function ShopContent() {
                         <button
                           onClick={() => {
                             setSelectedCategory('all');
-                            setPage(1);
+                            resetToFirstPage();
                             setIsFilterOpen(false);
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${selectedCategory === 'all'
@@ -400,7 +217,7 @@ function ShopContent() {
                                   type="button"
                                   onClick={() => {
                                     setSelectedCategory(parent.slug);
-                                    setPage(1);
+                                    resetToFirstPage();
                                     if (hasChildren) {
                                       setExpandedParents((prev) => new Set(prev).add(parent.id));
                                     }
@@ -433,7 +250,7 @@ function ShopContent() {
                                       type="button"
                                       onClick={() => {
                                         setSelectedCategory(child.slug);
-                                        setPage(1);
+                                        resetToFirstPage();
                                         setIsFilterOpen(false);
                                       }}
                                       className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedCategory === child.slug
@@ -464,7 +281,7 @@ function ShopContent() {
                           value={priceRange[1]}
                           onChange={(e) => {
                             setPriceRange([0, parseInt(e.target.value)]);
-                            setPage(1);
+                            resetToFirstPage();
                           }}
                           className="w-full h-2 bg-brand-taupe/40 rounded-lg appearance-none cursor-pointer accent-brand-bronze"
                         />
@@ -484,7 +301,7 @@ function ShopContent() {
                             key={rating}
                             onClick={() => {
                               setSelectedRating(rating === selectedRating ? 0 : rating);
-                              setPage(1);
+                              resetToFirstPage();
                             }}
                             className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedRating === rating
                               ? 'bg-brand-caramel/20 text-brand-bronze'
@@ -531,7 +348,7 @@ function ShopContent() {
                     value={sortBy}
                     onChange={(e) => {
                       setSortBy(e.target.value);
-                      setPage(1);
+                      resetToFirstPage();
                     }}
                     className="px-4 py-2 pr-8 border border-brand-taupe rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel text-sm bg-brand-cream cursor-pointer text-brand-ink"
                   >
@@ -553,8 +370,8 @@ function ShopContent() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-6 sm:gap-6 md:gap-8" data-product-shop>
-                    {products.map(product => (
-                      <ProductCard key={product.id} {...product} />
+                    {products.map((product, index) => (
+                      <ProductCard key={product.id} {...product} priority={index < 6} />
                     ))}
                   </div>
 
@@ -589,7 +406,7 @@ function ShopContent() {
                             setSelectedCategory('all');
                             setPriceRange([0, 5000]);
                             setSelectedRating(0);
-                            setPage(1);
+                            resetToFirstPage();
                           }}
                           className="inline-flex items-center bg-brand-bronze hover:bg-brand-caramel text-brand-cream px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
                         >

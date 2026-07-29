@@ -73,6 +73,13 @@ export async function GET(
     preferSingle: preferSingle(req),
   });
 
+  // Older PostgREST clients send Range: bytes-style "from-to" headers
+  const rangeHeader = req.headers.get("range");
+  if (rangeHeader && !params.has("offset") && !params.has("limit")) {
+    const m = rangeHeader.match(/(\d+)\s*-\s*(\d+)/);
+    if (m) (qb as any).range(Number(m[1]), Number(m[2]));
+  }
+
   const result = await qb;
   if (result.error) {
     return jsonError(result.error.message || "Query failed", 400);
@@ -81,7 +88,11 @@ export async function GET(
   const headers = new Headers(corsHeaders());
   headers.set("Content-Type", "application/json");
   if (result.count != null) {
-    headers.set("Content-Range", `0-${Math.max((Array.isArray(result.data) ? result.data.length : 1) - 1, 0)}/${result.count}`);
+    const offset = Number(req.nextUrl.searchParams.get("offset") || 0);
+    const len = Array.isArray(result.data) ? result.data.length : result.data ? 1 : 0;
+    const start = len === 0 ? 0 : offset;
+    const end = len === 0 ? 0 : offset + len - 1;
+    headers.set("Content-Range", `${start}-${end}/${result.count}`);
   }
 
   if (preferSingle(req)) {
