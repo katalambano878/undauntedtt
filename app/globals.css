@@ -21,6 +21,33 @@ html,
 body {
   background-color: var(--brand-cream);
   color: var(--brand-ink);
+  color-scheme: light;
+}
+
+/* Keep text fields light even when the OS is in dark mode / Chrome autofill. */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='tel'],
+input[type='url'],
+input[type='number'],
+textarea,
+select {
+  background-color: #ffffff;
+  color: var(--brand-ink);
+  color-scheme: light;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--brand-ink);
+  caret-color: var(--brand-ink);
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  transition: background-color 99999s ease-out;
 }
 
 /* ========================================

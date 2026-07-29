@@ -24,18 +24,16 @@ const metaDesc = getDefaultMetaDescription();
 // Brand palette — keep in sync with tailwind.config.js `brand.*` and
 // public/manifest.json. Bronze is the URL-bar tint on Android/iOS.
 const THEME_LIGHT = '#8e623b'; // brand.bronze (URL bar tint, light)
-const THEME_DARK = '#5e3f1f';  // darker bronze (URL bar tint, dark)
 const TILE_COLOR = '#8e623b';
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: THEME_LIGHT },
-    { media: '(prefers-color-scheme: dark)', color: THEME_DARK },
-  ],
-  colorScheme: 'light dark',
+  // Storefront is always light — do not advertise dark color-scheme or Chrome
+  // paints native form controls (inputs/checkboxes) black on dark OS settings.
+  themeColor: THEME_LIGHT,
+  colorScheme: 'light',
 };
 
 export const metadata: Metadata = {

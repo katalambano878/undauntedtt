@@ -190,7 +190,7 @@ export default function SignupPage() {
                   type="text"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.firstName ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-3 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.firstName ? 'border-red-500' : 'border-gray-300'
                     }`}
                   placeholder="John"
                 />
@@ -206,7 +206,7 @@ export default function SignupPage() {
                   type="text"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.lastName ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-3 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.lastName ? 'border-red-500' : 'border-gray-300'
                     }`}
                   placeholder="Doe"
                 />
@@ -224,7 +224,7 @@ export default function SignupPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.email ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-3 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.email ? 'border-red-500' : 'border-gray-300'
                   }`}
                 placeholder="you@example.com"
               />
@@ -241,7 +241,7 @@ export default function SignupPage() {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-3 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.phone ? 'border-red-500' : 'border-gray-300'
                   }`}
                 placeholder="+233 XX XXX XXXX"
               />
@@ -259,7 +259,7 @@ export default function SignupPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.password ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.password ? 'border-red-500' : 'border-gray-300'
                     }`}
                   placeholder="At least 8 characters"
                 />
@@ -286,7 +286,7 @@ export default function SignupPage() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                     }`}
                   placeholder="Re-enter password"
                 />

@@ -109,9 +109,10 @@ export default function LoginPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.email ? 'border-red-500' : 'border-gray-300'
+                className={`w-full px-4 py-3 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.email ? 'border-red-500' : 'border-gray-300'
                   }`}
                 placeholder="you@example.com"
+                autoComplete="email"
               />
               {errors.email && (
                 <p className="text-sm text-red-600 mt-2">{errors.email}</p>
@@ -127,9 +128,10 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.password ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-3 pr-12 border-2 rounded-lg bg-white text-brand-ink placeholder:text-gray-400 focus:ring-2 focus:ring-brand-caramel focus:border-brand-caramel ${errors.password ? 'border-red-500' : 'border-gray-300'
                     }`}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -150,7 +152,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={formData.rememberMe}
                   onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
-                  className="w-4 h-4 text-brand-bronze rounded focus:ring-brand-caramel"
+                  className="w-4 h-4 text-brand-bronze rounded border-gray-300 bg-white focus:ring-brand-caramel"
                 />
                 <span className="text-sm text-gray-700">Remember me</span>
               </label>
