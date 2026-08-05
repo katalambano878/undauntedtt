@@ -55,7 +55,8 @@ export default function CheckoutPage() {
   ];
 
   const hubtelEnabled = process.env.NEXT_PUBLIC_ENABLE_HUBTEL === 'true';
-  const defaultGateway = hubtelEnabled ? 'hubtel' : 'moolre';
+  // Moolre is the primary gateway; Hubtel remains available as a second option.
+  const defaultGateway = 'moolre';
 
   const [deliveryMethod, setDeliveryMethod] = useState('pickup');
   const [paymentMethod, setPaymentMethod] = useState(defaultGateway);
@@ -715,6 +716,23 @@ export default function CheckoutPage() {
                       <h2 className="text-xl font-bold text-gray-900 mb-2">Payment Method</h2>
                       <p className="text-sm text-gray-600 mb-4">Pay with Mobile Money or Visa card.</p>
                       <div className="space-y-3">
+                        <label className={`flex items-start justify-between gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'moolre' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
+                          <div className="flex items-start gap-3 flex-1">
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value="moolre"
+                              checked={paymentMethod === 'moolre'}
+                              onChange={() => setPaymentMethod('moolre')}
+                              className="w-5 h-5 text-brand-bronze mt-0.5"
+                            />
+                            <div>
+                              <p className="font-semibold text-gray-900">Mobile Money</p>
+                              <p className="text-sm text-gray-600">MTN, Telecel, AirtelTigo Mobile Money. Powered by Moolre.</p>
+                            </div>
+                          </div>
+                        </label>
+
                         <label className={`flex items-start justify-between gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'hubtel' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
                           <div className="flex items-start gap-3 flex-1">
                             <input
@@ -728,23 +746,6 @@ export default function CheckoutPage() {
                             <div>
                               <p className="font-semibold text-gray-900">Mobile Money / Card</p>
                               <p className="text-sm text-gray-600">MTN, Telecel, AirtelTigo Mobile Money, or Visa card. Powered by Hubtel.</p>
-                            </div>
-                          </div>
-                        </label>
-
-                        <label className={`flex items-start justify-between gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'moolre' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
-                          <div className="flex items-start gap-3 flex-1">
-                            <input
-                              type="radio"
-                              name="paymentMethod"
-                              value="moolre"
-                              checked={paymentMethod === 'moolre'}
-                              onChange={() => setPaymentMethod('moolre')}
-                              className="w-5 h-5 text-brand-bronze mt-0.5"
-                            />
-                            <div>
-                              <p className="font-semibold text-gray-900">Mobile Money (Backup)</p>
-                              <p className="text-sm text-gray-600">Alternative Mobile Money gateway. Use if Hubtel is unavailable.</p>
                             </div>
                           </div>
                         </label>

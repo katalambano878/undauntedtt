@@ -19,7 +19,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'hubtel' | 'moolre'>(hubtelEnabled ? 'hubtel' : 'moolre');
+  const [paymentMethod, setPaymentMethod] = useState<'hubtel' | 'moolre'>('moolre');
 
   useEffect(() => {
     async function fetchOrder() {
@@ -44,8 +44,8 @@ export default function PaymentPage() {
         const storedMethod = data.metadata?.payment_method;
         if (storedMethod === 'hubtel' || storedMethod === 'moolre') {
           setPaymentMethod(storedMethod);
-        } else if (hubtelEnabled) {
-          setPaymentMethod('hubtel');
+        } else {
+          setPaymentMethod('moolre');
         }
 
         // If already paid, redirect to success page
@@ -217,6 +217,20 @@ export default function PaymentPage() {
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h2 className="text-lg font-bold text-gray-900 mb-3">Payment Method</h2>
             <div className="space-y-3">
+              <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'moolre' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="moolre"
+                  checked={paymentMethod === 'moolre'}
+                  onChange={() => setPaymentMethod('moolre')}
+                  className="w-5 h-5 text-brand-bronze mt-0.5"
+                />
+                <div>
+                  <p className="font-semibold text-gray-900">Mobile Money</p>
+                  <p className="text-sm text-gray-600">Moolre — MTN, Telecel, AirtelTigo</p>
+                </div>
+              </label>
               <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'hubtel' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
                 <input
                   type="radio"
@@ -229,20 +243,6 @@ export default function PaymentPage() {
                 <div>
                   <p className="font-semibold text-gray-900">Mobile Money / Card</p>
                   <p className="text-sm text-gray-600">Hubtel — MTN, Telecel, AirtelTigo, or Visa</p>
-                </div>
-              </label>
-              <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'moolre' ? 'border-brand-bronze bg-brand-ice' : 'border-gray-300 hover:border-gray-400'}`}>
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="moolre"
-                  checked={paymentMethod === 'moolre'}
-                  onChange={() => setPaymentMethod('moolre')}
-                  className="w-5 h-5 text-brand-bronze mt-0.5"
-                />
-                <div>
-                  <p className="font-semibold text-gray-900">Mobile Money (Backup)</p>
-                  <p className="text-sm text-gray-600">Moolre — alternative gateway</p>
                 </div>
               </label>
             </div>
