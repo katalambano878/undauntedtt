@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BrandLogo from '@/components/BrandLogo';
 import ChangePasswordModal from '@/components/admin/ChangePasswordModal';
+import { SmsCreditDashboardCard } from '@/components/admin/SmsCreditDashboardCard';
 
 // Only set the `Secure` cookie attribute over HTTPS, otherwise browsers
 // silently drop it on localhost and the admin gets stuck in a login loop.
@@ -385,6 +386,7 @@ export default function AdminLayout({
           </div>
         </header>
 
+        <SmsCreditDashboardCard />
         <main className="p-4 lg:p-6">
           {children}
         </main>
